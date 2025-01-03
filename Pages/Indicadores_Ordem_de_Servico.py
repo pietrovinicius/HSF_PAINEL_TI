@@ -37,7 +37,7 @@ def encontrar_diretorio_instantclient(nome_pasta="instantclient-basiclite-window
     return None
 
 #@st.cache_data 
-def REL_1507():
+def REL_1507_Banda_Setor():
     try:
         # Chamar a função para obter o caminho do Instant Client
         caminho_instantclient = encontrar_diretorio_instantclient()
@@ -138,10 +138,17 @@ if __name__ == "__main__":
     try:
         st.write('# Indicadores de Ordem de Servico')
         
-        df = REL_1507()
-        df = df = df.fillna('-')
+        #Geracao de Data Frame:
+        df_rel_1507 = REL_1507_Banda_Setor()
         
-        st.dataframe(df,hide_index=True, height=680,use_container_width=True)
+        #Tratamento de valores null:
+        df_rel_1507 = df_rel_1507 = df_rel_1507.fillna('-')
+        
+        #tratamento de valores com casa decimal:
+        df_rel_1507['ANO'] = df_rel_1507['ANO'].apply(lambda x: "{:.0f}".format(x))
+        df_rel_1507['MINUTOS_TOTAL'] = df_rel_1507['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
+        
+        st.dataframe(df_rel_1507,hide_index=True, height=680,use_container_width=True)
         
     except Exception as err: 
         print(f"Inexperado {err=}, {type(err)=}")
