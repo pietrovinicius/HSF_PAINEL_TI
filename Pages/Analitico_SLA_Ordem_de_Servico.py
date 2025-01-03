@@ -236,30 +236,30 @@ if __name__ == "__main__":
     print(f'\n\nanos distintos sorted: {anos_distintos}\n\n')
 
     # Limita a lista de anos aos 3 primeiros:
-    anos_distintos = anos_distintos[:5]
+    anos_distintos = anos_distintos[:6]
     print(f'\n\nanos distintos[:3]: {anos_distintos}\n\n')
 
     # Inicializa o ano selecionado com o ano mais recente
     if 'ano_selecionado' not in st.session_state:
         st.session_state['ano_selecionado'] = anos_distintos[0]
-    
+
     # Criando os botões para selecionar o ano
-    with st.container(): #Contaner para os botoes de ano
-        st.write('<style>div.row-widget.stButton {display: flex; justify-content: flex-start;}</style>', unsafe_allow_html=True)
-        col_anos = st.columns(1) # Altere para 1 coluna
-        for ano in anos_distintos:
-            if col_anos[0].button(str(ano), key=f"btn_{ano}"):
-                st.session_state['ano_selecionado'] = ano
-                
+    col_anos = st.columns(len(anos_distintos))  # Agora cria uma coluna por botão
+    st.write('<style>div.row-widget.stButton {display: flex; justify-content: flex-start;}</style>',
+                 unsafe_allow_html=True)
+    for col, ano in zip(col_anos, anos_distintos):
+        if col.button(str(ano), key=f"btn_{ano}"):
+            st.session_state['ano_selecionado'] = ano
+    
     # Filtrando o Data Frame pelo ano selecionado:
     df_filtered_ano = df_rel_1618[df_rel_1618['ANO'] == st.session_state['ano_selecionado']]
-
+    
     # Obtendo a lista de meses distintos para o ano selecionado:
     meses_distintos = sorted(df_filtered_ano['OS_MES'].unique())
     
     # Inicializa o mês selecionado, usando o primeiro mês disponível
     if 'mes_selecionado' not in st.session_state:
-        st.session_state['mes_selecionado'] = None
+        st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
 
     # Criando os botões para selecionar o mês
     if meses_distintos:
@@ -283,8 +283,8 @@ if __name__ == "__main__":
         else:
             df_filtered_mes = df_filtered_ano[df_filtered_ano['OS_MES'] == st.session_state['mes_selecionado']]
     else:
-      df_filtered_mes = df_filtered_ano
-      st.write("Não há dados para esse ano")
+        df_filtered_mes = df_filtered_ano
+        st.write("Não há dados para esse ano")
 
     # Calculo de Indicadores
     indicadores_calc = indicadores(df_filtered_mes)
@@ -315,10 +315,10 @@ if __name__ == "__main__":
     with col20:
         # Chamando o Gráfico de Barras com Tempo por prioridade:
         grafico_barras_tempo_prioridade(indicadores_calc)
-    
+
     # Criar uma nova linha abaixo dos indicadores para o botão de download
     st.write("---")  # Linha separadora
-
+    
     # Estilo do DataFrame
     df_styled = df_filtered_mes.style.applymap(sla_cor_status, subset=['SLA'])
     
