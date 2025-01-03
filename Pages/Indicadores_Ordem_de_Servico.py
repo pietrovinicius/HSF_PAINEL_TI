@@ -2,7 +2,7 @@
 #@PLima
 #HFS - PAINEL DE DIVERSOS DADOS E INDICADORES
 #Indicadores de Ordem de Servico
-#Analítico SLA - Ordem de Serviço
+#RELATORIO 1507 - HSF - Indicadores Ordem de Servico
 
 import streamlit as st
 import pandas as pd
@@ -13,9 +13,11 @@ import pandas as pd
 import time
 import locale
 import datetime
+import plotly.express as px
+import io  # Para lidar com arquivos na memória
 
 #Configurando pagina para exibicao em modo WIDE:
-st.set_page_config(layout="wide",initial_sidebar_state="expanded",page_title="Indicadores Ordem de Servico")
+st.set_page_config(layout="wide",initial_sidebar_state="collapsed",page_title="Indicadores Ordem de Servico")
 
 def agora():
     agora = datetime.datetime.now()
@@ -37,7 +39,7 @@ def encontrar_diretorio_instantclient(nome_pasta="instantclient-basiclite-window
     print(f"A pasta '{nome_pasta}' nao foi encontrada na raiz do aplicativo.")
     return None
 
-#@st.cache_data 
+@st.cache_data 
 def REL_1507_Banda_Setor():
     try:
         # Chamar a função para obter o caminho do Instant Client
@@ -118,6 +120,25 @@ def REL_1507_Banda_Setor():
     
     return df
 
+# Função para transformar DataFrame em Excel e disponibilizar o download
+def download_dataframe_as_excel(df, filename="dados.xlsx"):
+    """
+    Converte um DataFrame em um arquivo Excel na memória e prepara para download.
+
+    Args:
+        df (pd.DataFrame): O DataFrame a ser convertido.
+        filename (str): Nome do arquivo para download.
+
+    Returns:
+        bytes: Arquivo Excel no formato bytes.
+    """
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Sheet1', index=False)
+    processed_data = output.getvalue()
+    return processed_data
+
+
 # Caminho da sua imagem (ajuste conforme a sua estrutura de pastas)
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
@@ -137,7 +158,22 @@ if __name__ == "__main__":
         df_rel_1507['ANO'] = df_rel_1507['ANO'].apply(lambda x: "{:.0f}".format(x))
         df_rel_1507['MINUTOS_TOTAL'] = df_rel_1507['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
         
-        st.dataframe(df_rel_1507,hide_index=True, height=680,use_container_width=True)
+        st.dataframe(df_rel_1507,hide_index=True,use_container_width=True)
+        
+        # Criar uma nova linha abaixo dos indicadores para o botão de download
+        st.write("---")  # Linha separadora
+        
+        # Disponibilizar o botão de download
+        download_xlsx = download_dataframe_as_excel(df_rel_1507)
+        st.download_button(
+            label="Download em XLSX",
+            data=download_xlsx,
+            file_name='dados_sla.xlsx',
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        # Criar uma nova linha abaixo dos indicadores para o botão de download
+        st.write("---")  # Linha separadora
         
     except Exception as err: 
         print(f"Inexperado {err=}, {type(err)=}")

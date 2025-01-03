@@ -1,3 +1,9 @@
+#03/01/2025
+#@PLima
+#HFS - PAINEL DE DIVERSOS DADOS E INDICADORES
+#Analítico SLA - Ordem de Serviço
+#RELATORIO 1618 - HSF - Analítico SLA - Ordem de Serviço (EXCEL)
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -162,6 +168,7 @@ def indicadores(df_rel_1618):
     print(f"percentual_ordens_fora_sla: {percentual_ordens_fora_sla}")
     print(f"media_tempo_total: {media_tempo_total}")
     print(f"media_tempo_por_prioridade: {media_tempo_por_prioridade}")
+    
     return {
         "total_ordens": total_ordens,
         "total_ordens_no_sla": total_ordens_no_sla,
