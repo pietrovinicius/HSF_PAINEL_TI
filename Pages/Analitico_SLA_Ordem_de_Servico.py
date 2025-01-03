@@ -13,9 +13,11 @@ import pandas as pd
 import time
 import locale
 import datetime
+import plotly.express as px
+import io  # Para lidar com arquivos na memória
 
 #Configurando pagina para exibicao em modo WIDE:
-st.set_page_config(layout="wide",initial_sidebar_state="expanded",page_title="Analítico SLA - Ordem de Serviço")
+st.set_page_config(layout="wide",initial_sidebar_state="collapsed",page_title="Analítico SLA - Ordem de Serviço")
 
 def agora():
     agora = datetime.datetime.now()
@@ -66,19 +68,21 @@ def REL_1618():
                 sql = """              
                     SELECT 
                     ATP.NR_SEQUENCIA AS NR_ORDEM,
-                    INITCAP(OBTER_NOME_USUARIO(ATP.NM_USUARIO_EXEC)) AS LOCAL,
+                    INITCAP(OBTER_NOME_USUARIO(ATP.NM_USUARIO_EXEC)) AS Analista,
                     --ATP.DT_ORDEM_SERVICO,
-                    EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) AS ORDEM_SERVICO_ANO,
-                    EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO) AS ORDEM_SERVICO_MES,
-                    TO_CHAR(ATP.DT_ORDEM_SERVICO, 'dd/mm/yyyy hh24:mi:ss') AS ORDEM_SERVICO,
-                    TO_CHAR(ATP.DT_ORDEM_SERVICO, 'Month') AS MES_TEXTO,
-                    DECODE(ATP.IE_PRIORIDADE, 'A', 'ALTA', 'M', 'MEDIA', 'E','EMERGÊNCIA', 'FORA DA PRIORIDADE') AS DS_PRIORIDADE, 
+                    EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) AS ANO,
+                    TO_CHAR(ATP.DT_ORDEM_SERVICO, 'Month') AS MES,
+                    --EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO) AS OS_MES,
+                    TO_CHAR(ATP.DT_ORDEM_SERVICO, 'dd/mm/yyyy hh24:mi') AS DATA,
+                    DECODE(ATP.IE_PRIORIDADE, 'A', 'Alta', 'M', 'Média', 'E','Emergência', 'Fora da Prioridade') AS DS_PRIORIDADE, 
                     DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) AS META_SLA,
                     OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, DT_FIM_REAL, 'TM') AS TEMPO_TOTAL,
-                    TO_CHAR(ATP.DT_FIM_REAL) AS DT_FIM_REAL,
+                    
+                    TO_CHAR(ATP.DT_FIM_REAL,'dd/mm/yyyy') AS DT_FIM_REAL,
+                    
                     CASE  
-                    WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) >=  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'ATENDIDO'
-                    WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) <  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'EXCEDIDO'
+                    WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) >=  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'Atendido'
+                    WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) <  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'Excedido'
                     ELSE 'FORA DO SLA'
                     END AS SLA
                 FROM MAN_ORDEM_SERVICO ATP
@@ -112,26 +116,137 @@ def REL_1618():
     
     return df
 
-# Caminho da sua imagem (ajuste conforme a sua estrutura de pastas)
+def sla_cor_status(val):
+    if val == 'Excedido':
+        return 'background-color: yellow; color: black ; font-weight: bold' # Amarelo com texto preto para melhor contraste
+    elif val == 'Em análise':
+        return 'background-color: lightblue; color: black ; font-weight: bold' # Verde claro com texto preto
+    elif val == 'Sim':
+        return 'background-color: sandybrown; color: black ; font-weight: bold;' # Amarelo com texto preto para melhor contraste
+    else:
+        return ''   
+
+def indicadores(df_rel_1618):
+
+    #Total de ordens
+    total_ordens = len(df_rel_1618)
+    
+    #Total de Ordens dentro do SLA
+    total_ordens_no_sla = len(df_rel_1618[df_rel_1618['SLA'] == 'Atendido'])
+    
+    #Total de Ordens fora do SLA
+    total_ordens_fora_sla = len(df_rel_1618[df_rel_1618['SLA'] == 'Excedido'])
+    
+    # Percentual de Ordens no SLA
+    percentual_ordens_no_sla = (total_ordens_no_sla / total_ordens) * 100 if total_ordens > 0 else 0
+
+    # Percentual de Ordens fora do SLA
+    percentual_ordens_fora_sla = (total_ordens_fora_sla / total_ordens) * 100 if total_ordens > 0 else 0
+
+    # Tempo médio total
+    df_rel_1618['TEMPO_TOTAL'] = df_rel_1618['TEMPO_TOTAL'].astype(int) # Garante que a coluna seja numérica
+    media_tempo_total = df_rel_1618['TEMPO_TOTAL'].mean()
+
+    # Tempo médio por prioridade
+    media_tempo_por_prioridade = df_rel_1618.groupby('DS_PRIORIDADE')['TEMPO_TOTAL'].mean().reset_index()
+    
+    return {
+      "total_ordens":total_ordens,
+      "total_ordens_no_sla":total_ordens_no_sla,
+      "total_ordens_fora_sla":total_ordens_fora_sla,
+      "percentual_ordens_no_sla":percentual_ordens_no_sla,
+      "percentual_ordens_fora_sla":percentual_ordens_fora_sla,
+      "media_tempo_total":media_tempo_total,
+      "media_tempo_por_prioridade":media_tempo_por_prioridade
+    }
+
+def grafico_pizza(df_rel_1618):
+    sla_counts = df_rel_1618['SLA'].value_counts().reset_index()
+    sla_counts.columns = ['SLA', 'count']
+    
+    fig = px.pie(sla_counts, names='SLA', values='count', title="Distribuição de Ordens por SLA")
+    st.plotly_chart(fig)
+
+def grafico_barras_tempo_prioridade(indicadores_calc):
+    fig = px.bar(indicadores_calc["media_tempo_por_prioridade"], x='DS_PRIORIDADE', y='TEMPO_TOTAL', title='Tempo Médio por Prioridade')
+    st.plotly_chart(fig)
+    
+
+#Função para transformar DataFrame em Excel e disponibilizar o download
+def download_dataframe_as_excel(df, filename="dados.xlsx"):
+    """
+    Converte um DataFrame em um arquivo Excel na memória e prepara para download.
+
+    Args:
+        df (pd.DataFrame): O DataFrame a ser convertido.
+        filename (str): Nome do arquivo para download.
+
+    Returns:
+        bytes: Arquivo Excel no formato bytes.
+    """
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Sheet1', index=False)
+    processed_data = output.getvalue()
+    return processed_data
+
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
 if __name__ == "__main__":
-    print('Analítico SLA - Ordem de Serviço')
     st.logo(logo_path,size="large")
-    try:
-        st.write('# Analítico SLA - Ordem de Serviço')
+    st.write('# Analítico SLA - Ordem de Serviço')
+    
+    #Geracao de Data Frame:
+    df_rel_1618 = REL_1618()
+    
+    #Tratamento de valores null:
+    df_rel_1618 = df_rel_1618.fillna('-')
+    
+    #tratamento de valores com casa decimal:
+    df_rel_1618['NR_ORDEM'] = df_rel_1618['NR_ORDEM'].apply(lambda x: "{:.0f}".format(x))
+    df_rel_1618['ANO'] = df_rel_1618['ANO'].apply(lambda x: "{:.0f}".format(x))
+    
+    #tratamento do valor com .0:
+    df_rel_1618['META_SLA'] = df_rel_1618['META_SLA'].astype(str).str.replace('.0', '')
+
+    #Calculo de Indicadores
+    indicadores_calc = indicadores(df_rel_1618)
+    
+    #colunas para exibir os indicadores:
+    col1, col2, col3 = st.columns(3)
+
+    #Exibição dos Indicadores
+    with col1:
+        st.metric("Total de Ordens", value = indicadores_calc["total_ordens"])
         
-        #Geracao de Data Frame:
-        df_rel_1618 = REL_1618()
-        
-        #Tratamento de valores null:
-        df_rel_1618 = df_rel_1618 = df_rel_1618.fillna('-')
-        
-        #tratamento de valores com casa decimal:
-        #df_rel_1618['ANO'] = df_rel_1618['ANO'].apply(lambda x: "{:.0f}".format(x))
-        #df_rel_1618['MINUTOS_TOTAL'] = df_rel_1618['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
-        
-        st.dataframe(df_rel_1618,hide_index=True, height=680,use_container_width=True)
-        
-    except Exception as err: 
-        print(f"Inexperado {err=}, {type(err)=}")
+    with col2:
+       st.metric("Ordens no SLA", value = f'{indicadores_calc["total_ordens_no_sla"]} ({indicadores_calc["percentual_ordens_no_sla"]:.2f}%)')
+
+    with col3:
+       st.metric("Ordens Fora do SLA", value = f'{indicadores_calc["total_ordens_fora_sla"]} ({indicadores_calc["percentual_ordens_fora_sla"]:.2f}%)')
+
+    st.metric("Tempo Médio de Atendimento", value=f'{indicadores_calc["media_tempo_total"]:.2f}')
+
+    #Chamando o Grafico de Pizza
+    grafico_pizza(df_rel_1618)
+
+    #Chamando o Gráfico de Barras com Tempo por prioridade:
+    grafico_barras_tempo_prioridade(indicadores_calc)
+    
+    # Criar uma nova linha abaixo dos indicadores para o botão de download
+    st.write("---")  # Linha separadora
+    
+# Disponibilizar o botão de download
+    download_xlsx = download_dataframe_as_excel(df_rel_1618)
+    st.download_button(
+        label="Baixar Dados (XLSX)",
+        data=download_xlsx,
+        file_name='dados_sla.xlsx',
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+    #Estilo do DataFrame
+    df_styled = df_rel_1618.style.applymap(sla_cor_status, subset=['SLA'])
+
+    #Exibindo o dataframe:
+    #st.dataframe(df_styled,hide_index=True, height=680,use_container_width=True)
