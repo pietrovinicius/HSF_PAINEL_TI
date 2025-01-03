@@ -1,8 +1,3 @@
-#03/01/2025
-#@PLima
-#HFS - PAINEL DE DIVERSOS DADOS E INDICADORES
-#Analítico SLA - Ordem de Serviço
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -45,6 +40,7 @@ def encontrar_diretorio_instantclient(
         return None
 
 
+# @st.cache_data
 @st.cache_data
 def REL_1618():
     try:
@@ -207,7 +203,6 @@ def download_dataframe_as_excel(df, filename="dados.xlsx"):
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
 if __name__ == "__main__":
-    
     # Configurando o idioma
     locale.setlocale(locale.LC_ALL, 'pt_BR.utf8')
     
@@ -252,30 +247,28 @@ if __name__ == "__main__":
     df_filtered_ano = df_rel_1618[df_rel_1618['ANO'] == st.session_state['ano_selecionado']]
 
     # Obtendo a lista de meses distintos para o ano selecionado:
-    #meses_distintos = sorted(df_filtered_ano['MES'].unique(), key=lambda x: datetime.datetime.strptime(x, '%B').month) #Removido a ordenação por nome do mês
-    meses_distintos = sorted(df_filtered_ano['OS_MES'].unique()) #Ordenando pelo numero do mês
-    
+    meses_distintos = sorted(df_filtered_ano['OS_MES'].unique())
     
     # Inicializa o mês selecionado, usando o primeiro mês disponível
     if 'mes_selecionado' not in st.session_state:
-        st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
-
+      st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
+    
     # Criando os botões para selecionar o mês
     if meses_distintos:
-        
-        #Converte os números para nome do mês
-        meses_nomes = [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
-        
-        col_meses = st.columns(len(meses_distintos))
-        for col, mes, nome_mes in zip(col_meses, meses_distintos, meses_nomes):
-            if col.button(str(nome_mes), key=f"btn_mes_{mes}"):
-                st.session_state['mes_selecionado'] = mes
+      
+      #Converte os números para nome do mês
+      meses_nomes = [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
+      
+      col_meses = st.columns(len(meses_distintos))
+      for col, mes, nome_mes in zip(col_meses, meses_distintos, meses_nomes):
+          if col.button(str(nome_mes), key=f"btn_mes_{mes}"):
+              st.session_state['mes_selecionado'] = mes
 
-        # Filtrando o data frame pelo mes selecionado
-        df_filtered_mes = df_filtered_ano[df_filtered_ano['OS_MES'] == st.session_state['mes_selecionado']]
+      # Filtrando o data frame pelo mes selecionado
+      df_filtered_mes = df_filtered_ano[df_filtered_ano['OS_MES'] == st.session_state['mes_selecionado']]
     else:
-        df_filtered_mes = df_filtered_ano
-        st.write("Não há dados para esse ano")
+      df_filtered_mes = df_filtered_ano
+      st.write("Não há dados para esse ano")
 
     # Calculo de Indicadores
     indicadores_calc = indicadores(df_filtered_mes)
@@ -301,7 +294,7 @@ if __name__ == "__main__":
     grafico_pizza(df_filtered_mes)
 
     # Chamando o Gráfico de Barras com Tempo por prioridade:
-    grafico_barras_tempo_prioridade(indicadores_calc)
+    # grafico_barras_tempo_prioridade(indicadores_calc)
 
     # Criar uma nova linha abaixo dos indicadores para o botão de download
     st.write("---")  # Linha separadora
@@ -311,10 +304,9 @@ if __name__ == "__main__":
     
     # Exibindo o dataframe:
     st.dataframe(df_styled, hide_index=True, use_container_width=True)
-    print(f"\ndf_styled:\n{df_styled}")
-    st.write("---")  # Linha separadora
+    
     # Disponibilizar o botão de download
-    download_xlsx = download_dataframe_as_excel(df_styled)
+    download_xlsx = download_dataframe_as_excel(df_filtered_mes)
     st.download_button(
         label="Download em XLSX",
         data=download_xlsx,
