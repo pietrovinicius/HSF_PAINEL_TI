@@ -1,3 +1,8 @@
+#03/01/2025
+#@PLima
+#HFS - PAINEL DE DIVERSOS DADOS E INDICADORES
+#Analítico SLA - Ordem de Serviço
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -40,7 +45,7 @@ def encontrar_diretorio_instantclient(
         return None
 
 
-# @st.cache_data
+@st.cache_data
 def REL_1618():
     try:
         # Chamar a função para obter o caminho do Instant Client
@@ -306,9 +311,10 @@ if __name__ == "__main__":
     
     # Exibindo o dataframe:
     st.dataframe(df_styled, hide_index=True, use_container_width=True)
-
+    print(f"\ndf_styled:\n{df_styled}")
+    st.write("---")  # Linha separadora
     # Disponibilizar o botão de download
-    download_xlsx = download_dataframe_as_excel(df_rel_1618)
+    download_xlsx = download_dataframe_as_excel(df_styled)
     st.download_button(
         label="Download em XLSX",
         data=download_xlsx,
