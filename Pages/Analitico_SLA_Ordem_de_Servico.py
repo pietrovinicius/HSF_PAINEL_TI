@@ -19,6 +19,9 @@ import io  # Para lidar com arquivos na memória
 #Configurando pagina para exibicao em modo WIDE:
 st.set_page_config(layout="wide",initial_sidebar_state="collapsed",page_title="Analítico SLA - Ordem de Serviço")
 
+#Aumentando exiubição do dataframe no Streamlit:
+pd.set_option("styler.render.max_elements", 1249090)
+
 def agora():
     agora = datetime.datetime.now()
     agora = agora.strftime("%Y-%m-%d %H-%M-%S")
@@ -90,8 +93,9 @@ def REL_1618():
                 INNER JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
                 INNER JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
                 LEFT JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
-                WHERE ATP.DT_ORDEM_SERVICO	BETWEEN sysdate -90  and sysdate --:DT_INICIAL AND :DT_FINAL
-                AND ATP.IE_STATUS_ORDEM = 3
+                --WHERE ATP.DT_ORDEM_SERVICO	BETWEEN sysdate -90  and sysdate --:DT_INICIAL AND :DT_FINAL
+                --AND ATP.IE_STATUS_ORDEM = 3
+                WHERE ATP.IE_STATUS_ORDEM = 3
 
                 ORDER BY
                     EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) DESC,
@@ -108,6 +112,8 @@ def REL_1618():
                 
                 # Visualizar os primeiros 5 registros
                 print(f'data_frame:\n{df.head(5)}')
+                print(f"\nExemplo:\n{df.sample()}")
+                print(f"\nTamanho:{df.shape}")
                 
                 print("DataFrame gerado com sucesso!")
 
@@ -209,8 +215,32 @@ if __name__ == "__main__":
     #tratamento do valor com .0:
     df_rel_1618['META_SLA'] = df_rel_1618['META_SLA'].astype(str).str.replace('.0', '')
 
+    #Obtendo a lista de anos distintos
+    anos_distintos = df_rel_1618['ANO'].unique()
+    print(f'\n\nanos distintos: {anos_distintos}\n\n')
+    
+    anos_distintos = sorted(anos_distintos, reverse=True)
+    print(f'\n\nanos distintos sorted: {anos_distintos}\n\n')
+    
+    #Limita a lista de anos aos 3 primeiros:
+    anos_distintos = anos_distintos[:3]
+    print(f'\n\nanos distintos[:3]: {anos_distintos}\n\n')
+    
+    #Inicializa o ano selecionado com o ano mais recente
+    if 'ano_selecionado' not in st.session_state:
+      st.session_state['ano_selecionado'] = anos_distintos[0]
+        
+    # Criando os botões para selecionar o ano
+    col_anos = st.columns(len(anos_distintos))
+    for col, ano in zip(col_anos, anos_distintos):
+        if col.button(str(ano), key=f"btn_{ano}"):
+            st.session_state['ano_selecionado'] = ano
+    
+    #Filtrando o Data Frame pelo ano selecionado:
+    df_filtered = df_rel_1618[df_rel_1618['ANO'] == st.session_state['ano_selecionado']]
+    
     #Calculo de Indicadores
-    indicadores_calc = indicadores(df_rel_1618)
+    indicadores_calc = indicadores(df_filtered)
     
     #colunas para exibir os indicadores:
     col1, col2, col3 = st.columns(3)
@@ -228,25 +258,28 @@ if __name__ == "__main__":
     st.metric("Tempo Médio de Atendimento", value=f'{indicadores_calc["media_tempo_total"]:.2f}')
 
     #Chamando o Grafico de Pizza
-    grafico_pizza(df_rel_1618)
+    grafico_pizza(df_filtered)
 
     #Chamando o Gráfico de Barras com Tempo por prioridade:
-    grafico_barras_tempo_prioridade(indicadores_calc)
+    #grafico_barras_tempo_prioridade(indicadores_calc)
     
     # Criar uma nova linha abaixo dos indicadores para o botão de download
     st.write("---")  # Linha separadora
     
-# Disponibilizar o botão de download
+    #Estilo do DataFrame
+    df_filtered = df_filtered.style.applymap(sla_cor_status, subset=['SLA'])
+
+    #Exibindo o dataframe:
+    st.dataframe(df_filtered,hide_index=True,use_container_width=True)
+    
+    # Disponibilizar o botão de download
     download_xlsx = download_dataframe_as_excel(df_rel_1618)
     st.download_button(
-        label="Baixar Dados (XLSX)",
+        label="Download em XLSX",
         data=download_xlsx,
         file_name='dados_sla.xlsx',
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
-    #Estilo do DataFrame
-    df_styled = df_rel_1618.style.applymap(sla_cor_status, subset=['SLA'])
-
-    #Exibindo o dataframe:
-    #st.dataframe(df_styled,hide_index=True, height=680,use_container_width=True)
+    # Criar uma nova linha abaixo dos indicadores para o botão de download
+    st.write("---")  # Linha separadora
