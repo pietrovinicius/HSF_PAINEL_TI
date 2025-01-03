@@ -136,7 +136,7 @@ def sla_cor_status(val):
 def indicadores(df_rel_1618):
     # Total de ordens
     total_ordens = len(df_rel_1618)
-
+    
     # Total de Ordens dentro do SLA
     total_ordens_no_sla = len(df_rel_1618[df_rel_1618['SLA'] == 'Atendido'])
 
@@ -155,7 +155,13 @@ def indicadores(df_rel_1618):
 
     # Tempo médio por prioridade
     media_tempo_por_prioridade = df_rel_1618.groupby('DS_PRIORIDADE')['TEMPO_TOTAL'].mean().reset_index()
-
+    print(f"total_ordens: {total_ordens}")
+    print(f"total_ordens_no_sla: {total_ordens_no_sla}")
+    print(f"total_ordens_fora_sla: {total_ordens_fora_sla}")
+    print(f"percentual_ordens_no_sla: {percentual_ordens_no_sla}")
+    print(f"percentual_ordens_fora_sla: {percentual_ordens_fora_sla}")
+    print(f"media_tempo_total: {media_tempo_total}")
+    print(f"media_tempo_por_prioridade: {media_tempo_por_prioridade}")
     return {
         "total_ordens": total_ordens,
         "total_ordens_no_sla": total_ordens_no_sla,
@@ -255,7 +261,6 @@ if __name__ == "__main__":
     
     # Criando os botões para selecionar o mês
     if meses_distintos:
-      
       #Converte os números para nome do mês
       meses_nomes = [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
       
@@ -271,14 +276,16 @@ if __name__ == "__main__":
       st.write("Não há dados para esse ano")
 
     # Calculo de Indicadores
+    print(f"Calculo de Indicadores com o df_filtered_mes:\n{df_filtered_mes.head(5)}")
     indicadores_calc = indicadores(df_filtered_mes)
 
     # colunas para exibir os indicadores:
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 , col4 = st.columns(4)
 
     # Exibição dos Indicadores
     with col1:
         st.metric("Total de Ordens", value=indicadores_calc["total_ordens"])
+        
 
     with col2:
         st.metric("Ordens no SLA",
@@ -287,14 +294,18 @@ if __name__ == "__main__":
     with col3:
         st.metric("Ordens Fora do SLA",
                   value=f'{indicadores_calc["total_ordens_fora_sla"]} ({indicadores_calc["percentual_ordens_fora_sla"]:.2f}%)')
+    with col4:
+        st.metric("Tempo Médio de Atendimento", value=f'{indicadores_calc["media_tempo_total"]:.2f}')
 
-    st.metric("Tempo Médio de Atendimento", value=f'{indicadores_calc["media_tempo_total"]:.2f}')
-
-    # Chamando o Grafico de Pizza
-    grafico_pizza(df_filtered_mes)
-
-    # Chamando o Gráfico de Barras com Tempo por prioridade:
-    # grafico_barras_tempo_prioridade(indicadores_calc)
+    
+    col10, col20 = st.columns(2)
+    with col10:
+        # Chamando o Grafico de Pizza
+        grafico_pizza(df_filtered_mes)
+        
+    with col20:
+        # Chamando o Gráfico de Barras com Tempo por prioridade:
+        grafico_barras_tempo_prioridade(indicadores_calc)
 
     # Criar uma nova linha abaixo dos indicadores para o botão de download
     st.write("---")  # Linha separadora
