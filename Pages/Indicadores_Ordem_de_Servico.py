@@ -2,6 +2,7 @@
 #@PLima
 #HFS - PAINEL DE DIVERSOS DADOS E INDICADORES
 #Indicadores de Ordem de Servico
+#Analítico SLA - Ordem de Serviço
 
 import streamlit as st
 import pandas as pd
@@ -104,24 +105,12 @@ def REL_1507_Banda_Setor():
                 #Executando a query:
                 #print(f'cursor.execute(sql)\n{sql}')
                 cursor.execute(sql)
-                
-                # Imprimir os resultados da consulta para verificar
-                print(f'results = cursor.fetchall()\n')
                 results = cursor.fetchall()
-        
-                #Exibindo redultado no console:
-                #print(f'Exibindo redultado no console:\n')    
-                #for r in cursor.execute(sql):
-                #    print(r)
-                
-                #Inserindo resultado em um data frame:
-                #df = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
-                
-                print(f'df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])')
                 df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])
                 
                 # Visualizar os primeiros 5 registros
                 print(f'data_frame:\n{df.head(5)}')
+                
                 print("DataFrame gerado com sucesso!")
 
     except Exception as erro:
