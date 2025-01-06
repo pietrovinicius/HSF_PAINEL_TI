@@ -303,8 +303,7 @@ def formatar_horas_df(df):
     df['HORAS_FORMATADA'] = df['HORAS'].apply(formatar_horas_individual)
     df = df.drop('HORAS', axis=1)
     return df
-
-
+   
 def exibir_tipos_os(df):
     """
       Exibe um gráfico de barras da distribuição de tipos de O.S.
@@ -314,7 +313,7 @@ def exibir_tipos_os(df):
     if df.empty:
        st.warning("Não há dados para exibir o gráfico de tipos de O.S")
        return
-    print(f"\n=================================================\n{df['DESCRICAO']}\n{df['DESCRICAO'].head(5)}\n")
+    print(f"'DESCRICAO:\n{df['DESCRICAO'].head(5)}\n")
     tipos_os = df['DESCRICAO'].str.lower().copy()
     
     def categorizar_tipo_os(texto):
@@ -335,9 +334,25 @@ def exibir_tipos_os(df):
 
     tipos_contagem = df['TIPO_OS'].value_counts().reset_index()
     tipos_contagem.columns = ['TIPO_OS', 'QUANTIDADE']
+    
+    color_map = {
+        'Corretiva': 'skyblue',
+        'Preventiva': 'lightgreen',
+        'Desenvolvimento': 'orange',
+        'Projetos': 'lightcoral',
+        'Outros': 'gray'
+    }
+    
 
-    fig = px.bar(tipos_contagem, x='TIPO_OS', y='QUANTIDADE', title='Distribuição de Tipos de O.S')
+    fig = px.bar(tipos_contagem, 
+                 x='TIPO_OS', 
+                 y='QUANTIDADE', 
+                 title='Distribuição de Tipos de O.S',
+                 color='TIPO_OS',
+                 color_discrete_map = color_map
+                )
     st.plotly_chart(fig)
+    
 
 def calcular_custo_materiais(df):
     """Calcula o custo total e a quantidade de requisições de materiais."""
