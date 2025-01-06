@@ -277,6 +277,9 @@ def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
         st.warning("Não há dados para exibir o gráfico de barras de tempo por prioridade.")
         return
     
+    # Formatar a coluna TEMPO_TOTAL para exibição
+    indicadores_calc["media_tempo_por_prioridade"]['Tempo_Formatado'] = indicadores_calc["media_tempo_por_prioridade"]['TEMPO_TOTAL'].apply(formatar_horas)
+    
     # Definir o mapa de cores
     color_map = {
         'Alta': 'red',
@@ -291,7 +294,9 @@ def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
                  title='Tempo Médio por Prioridade',
                  color='DS_PRIORIDADE',  # Usar DS_PRIORIDADE para aplicar as cores
                  color_discrete_map=color_map,
-                 text_auto=True)
+                 text_auto=False,
+                 text = 'Tempo_Formatado'
+                )
     
     fig.update_layout(
         legend_title_text=" ",
@@ -306,7 +311,7 @@ def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
         textposition='outside',  
         textfont_family="Arial", 
         textfont_size=13,
-        hovertemplate="<b>Prioridade:</b> %{x}<br><b>Tempo Total (Min):</b> %{y}" # Personalizando o hovertemplate
+        hovertemplate="<b>Prioridade:</b> %{x}<br><b>Tempo Total:</b> %{text}" # Personalizando o hovertemplate
      )
     st.plotly_chart(fig)
     
@@ -405,7 +410,8 @@ def exibir_principais_setores(df, top_n=10):
                  y='QUANTIDADE', 
                  title=f'Top {top_n} Setores com Mais O.S',
                  color = 'SETOR_ATENDIMENTO',
-                 color_discrete_map = color_map
+                 color_discrete_map = color_map,
+                 text_auto=True
                 )
         
     fig.update_layout(
@@ -454,6 +460,8 @@ if __name__ == "__main__":
     locale.setlocale(locale.LC_ALL, 'pt_BR.utf8')
 
     st.write('# Analítico SLA - Ordem de Serviço')
+    
+    st.write('Rel 1618 - HSF - Analítico SLA - Ordem de Serviço (EXCEL)')
 
     df_rel_1618 = obter_dados_relatorio_1618()
     # Tratamento de valores null:
@@ -469,6 +477,8 @@ if __name__ == "__main__":
 
     # Obtendo a lista de anos distintos
     anos_distintos = sorted(df_rel_1618['ANO'].unique(), reverse=True)
+    # Filtra os anos, mantendo apenas os iguais ou superiores a 2022
+    anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2022]
     anos_distintos = anos_distintos[:6]
 
     # Inicializa o ano mais recente
