@@ -16,7 +16,7 @@ import plotly.colors as pc
 import random
 
 # Configuração da página Streamlit
-st.set_page_config(layout="wide", initial_sidebar_state="collapsed",
+st.set_page_config(layout="wide", initial_sidebar_state="expanded",
                    page_title="Analítico SLA - Ordem de Serviço")
 
 # Aumentando exibição do DataFrame no Streamlit
@@ -458,6 +458,7 @@ logo_path = 'HSF_LOGO_-_1228x949_001.png'
 if __name__ == "__main__":
     print(f'__main__')
     locale.setlocale(locale.LC_ALL, 'pt_BR.utf8')
+    st.logo(logo_path,size="large")
 
     st.write('# Analítico SLA - Ordem de Serviço')
     
@@ -474,57 +475,58 @@ if __name__ == "__main__":
 
     # tratamento do valor com .0:
     df_rel_1618['META_SLA'] = df_rel_1618['META_SLA'].astype(str).str.replace('.0', '')
-
-    # Obtendo a lista de anos distintos
-    anos_distintos = sorted(df_rel_1618['ANO'].unique(), reverse=True)
-    # Filtra os anos, mantendo apenas os iguais ou superiores a 2022
-    anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2022]
-    anos_distintos = anos_distintos[:6]
-
-    # Inicializa o ano mais recente
-    if 'ano_selecionado' not in st.session_state:
-        st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
-        
-    st.write("---")
     
-    # Cria os botões para selecionar o ano
-    if anos_distintos:
-        col_anos = st.columns(len(anos_distintos))
-        for col, ano in zip(col_anos, anos_distintos):
-            if col.button(str(ano), key=f"btn_{ano}"):
-                st.session_state['ano_selecionado'] = ano
-    else:
-        st.warning("Não há dados para exibir os filtros de anos.")
-
-    # Filtrando o Data Frame pelo ano selecionado
-    if st.session_state['ano_selecionado'] is not None:
-        df_filtered_ano = df_rel_1618[df_rel_1618['ANO'] == st.session_state['ano_selecionado']]
-    else:
-        df_filtered_ano = df_rel_1618.copy()
-
-    # Obtendo a lista de meses distintos para o ano selecionado
-    meses_distintos = sorted(df_filtered_ano['OS_MES'].unique())
-
-    # Inicializa o mês selecionado, usando o primeiro mês disponível
-    if 'mes_selecionado' not in st.session_state:
-        st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
-
-    # Criando os botões para selecionar o mês
-    if meses_distintos:
-        #inserido botao de todos e botoes para cada mes 
-        meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
-        col_meses = st.columns(len(meses_nomes))
-
-        for col, mes_nome in zip(col_meses, meses_nomes):
-            if col.button(str(mes_nome), key=f"btn_mes_{mes_nome}"):
-                if mes_nome == "Todos":
-                    st.session_state['mes_selecionado'] = None
-                else:
-                    mes_selecionado_os_mes = meses_distintos[meses_nomes.index(mes_nome) - 1]
+######################################################################################################################
+    with st.sidebar:
+        # Obtendo a lista de anos distintos
+        anos_distintos = sorted(df_rel_1618['ANO'].unique(), reverse=True)
+        # Filtra os anos, mantendo apenas os iguais ou superiores a 2022
+        anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2022]
+        anos_distintos = anos_distintos[:6]
+        
+        
+        # Inicializa o ano mais recente
+        if 'ano_selecionado' not in st.session_state:
+            st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
+        
+        st.write("---")
+        
+        # Cria os botões para selecionar o ano
+        if anos_distintos:
+            st.session_state['ano_selecionado'] = st.selectbox("Selecione o Ano", anos_distintos)
+        else:
+            st.warning("Não há dados para exibir os filtros de anos.")
+        
+        # Filtrando o Data Frame pelo ano selecionado
+        if st.session_state['ano_selecionado'] is not None:
+            df_filtered_ano = df_rel_1618[df_rel_1618['ANO'] == st.session_state['ano_selecionado']]
+        else:
+            df_filtered_ano = df_rel_1618.copy()
+        
+        # Obtendo a lista de meses distintos para o ano selecionado
+        meses_distintos = sorted(df_filtered_ano['OS_MES'].unique())
+    
+        # Inicializa o mês selecionado, usando o primeiro mês disponível
+        if 'mes_selecionado' not in st.session_state:
+            st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
+        
+        # Criando os botões para selecionar o mês
+        if meses_distintos:
+             #inserido botao de todos e botoes para cada mes
+             meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
+             st.session_state['mes_selecionado'] = st.selectbox("Selecione o Mês", meses_nomes)
+             
+             if st.session_state['mes_selecionado'] == "Todos":
+                st.session_state['mes_selecionado'] = None
+             else:
+                try:
+                    mes_selecionado_os_mes = meses_distintos[meses_nomes.index(st.session_state['mes_selecionado']) - 1]
                     st.session_state['mes_selecionado'] = mes_selecionado_os_mes
-    else:
-        st.warning("Não há dados para exibir os filtros de meses.")
-
+                except ValueError:
+                    pass
+        else:
+            st.warning("Não há dados para exibir os filtros de meses.")
+######################################################################################################################
     st.write("---")
     
     # Filtrando o data frame pelo mes selecionado
@@ -535,19 +537,7 @@ if __name__ == "__main__":
         print(f'\nElse do st.session_state:')
         print(f"Ano selecionado: {st.session_state['ano_selecionado']}")
         print(f"Nome do mes selecionado: {datetime.date(1900, int(st.session_state['mes_selecionado']), 1).strftime('%B')}")
-        
-        colA = st.columns(5)
-        with colA[0]:
-            #st.write(f"## {st.session_state['ano_selecionado']}")
-            #Verifica se um mes foi selecionado
-            if st.session_state['mes_selecionado'] != None:
-                st.write(f"# {st.session_state['ano_selecionado']} - {datetime.date(1900, int(st.session_state['mes_selecionado']), 1).strftime('%B')}:")
-            else:
-                st.write(f"# {st.session_state['ano_selecionado']} - Todos")
-        
-        #st.write(f"## Ano selecionado: {st.session_state['ano_selecionado']}")
-        #st.write(f"## Mês selecionado: {datetime.date(1900, int(st.session_state['mes_selecionado']), 1).strftime('%B')}")
-        
+
     # Calculo de Indicadores
     indicadores_calc = calcular_indicadores(df_filtered_mes)
     print('\n===============================================\n')
