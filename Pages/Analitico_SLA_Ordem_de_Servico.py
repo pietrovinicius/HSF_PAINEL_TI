@@ -230,36 +230,6 @@ def exibir_grafico_pizza(df):
                  color_discrete_map = color_map)
     st.plotly_chart(fig)
 
-
-def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
-    """Exibe o gráfico de barras do tempo médio por prioridade."""
-    if indicadores_calc["media_tempo_por_prioridade"].empty:
-        st.warning("Não há dados para exibir o gráfico de barras de tempo por prioridade.")
-        return
-    
-    # Definir o mapa de cores
-    color_map = {
-        'Alta': 'red',
-        'Média': 'orange',
-        'Fora da Prioridade': 'gray',
-        'Emergência': 'purple'
-    }
-    
-    fig = px.bar(indicadores_calc["media_tempo_por_prioridade"], 
-                 x='DS_PRIORIDADE', 
-                 y='TEMPO_TOTAL',
-                 title='Tempo Médio por Prioridade',
-                 color='DS_PRIORIDADE',  # Usar DS_PRIORIDADE para aplicar as cores
-                 color_discrete_map=color_map)  # Aplicar o mapa de cores
-    st.plotly_chart(fig)
-
-def preparar_download_excel(df, filename="dados.xlsx"):
-    """Converte um DataFrame em um arquivo Excel na memória para download."""
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, sheet_name='Sheet1', index=False)
-    return output.getvalue()
-
 def exibir_principais_setores(df, top_n=10):
     """
         Exibe os principais setores que abriram mais O.S. em um gráfico de barras.
@@ -332,7 +302,40 @@ def formatar_horas_df(df):
     df['HORAS_FORMATADA'] = df['HORAS'].apply(formatar_horas_individual)
     df = df.drop('HORAS', axis=1)
     return df
-   
+
+def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
+    """Exibe o gráfico de barras do tempo médio por prioridade."""
+    if indicadores_calc["media_tempo_por_prioridade"].empty:
+        st.warning("Não há dados para exibir o gráfico de barras de tempo por prioridade.")
+        return
+    
+    # Definir o mapa de cores
+    color_map = {
+        'Alta': 'red',
+        'Média': 'orange',
+        'Fora da Prioridade': 'gray',
+        'Emergência': 'purple'
+    }
+    
+    fig = px.bar(indicadores_calc["media_tempo_por_prioridade"], 
+                 x='DS_PRIORIDADE', 
+                 y='TEMPO_TOTAL',
+                 title='Tempo Médio por Prioridade',
+                 color='DS_PRIORIDADE',  # Usar DS_PRIORIDADE para aplicar as cores
+                 color_discrete_map=color_map,
+                 text_auto=True)
+    
+    fig.update_layout(
+        legend_title_text=" ",
+         margin=dict(l=20, r=20, t=60, b=20),
+         #template="plotly_dark", # Paletas de cores que o plotly oferece, pode usar: "plotly_dark" ou "plotly"
+        title_font=dict(size=17),
+    )
+    
+    fig.update_xaxes(title_text='Prioridade')  # Alterar o rótulo do eixo x
+    fig.update_yaxes(title_text='Tempo Total (Min)') # Alterar o rótulo do eixo y
+    st.plotly_chart(fig)
+    
 def exibir_tipos_os(df):
     """
       Exibe um gráfico de barras da distribuição de tipos de O.S.
@@ -389,6 +392,7 @@ def exibir_tipos_os(df):
     )
 
     fig.update_xaxes(title_text='')  # Remover o rótulo do eixo x
+    fig.update_yaxes(title_text='Quantidade') 
     fig.update_traces(textposition='outside',  textfont_family="Arial", textfont_size=13 )
     st.plotly_chart(fig)
     
@@ -409,6 +413,12 @@ def calcular_custo_materiais(df):
 
     return custo_total, quantidade_requisicoes
 
+def preparar_download_excel(df, filename="dados.xlsx"):
+    """Converte um DataFrame em um arquivo Excel na memória para download."""
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Sheet1', index=False)
+    return output.getvalue()
 
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
