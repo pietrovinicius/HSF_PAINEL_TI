@@ -216,14 +216,26 @@ def exibir_grafico_pizza(df):
     fig = px.pie(sla_counts, names='SLA', values='count', title="Distribuição de Ordens por SLA")
     st.plotly_chart(fig)
 
-
 def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
     """Exibe o gráfico de barras do tempo médio por prioridade."""
     if indicadores_calc["media_tempo_por_prioridade"].empty:
         st.warning("Não há dados para exibir o gráfico de barras de tempo por prioridade.")
         return
-    fig = px.bar(indicadores_calc["media_tempo_por_prioridade"], x='DS_PRIORIDADE', y='TEMPO_TOTAL',
-                 title='Tempo Médio por Prioridade')
+    
+    # Definir o mapa de cores
+    color_map = {
+        'Alta': 'red',
+        'Média': 'orange',
+        'Fora da Prioridade': 'gray',
+        'Emergência': 'purple'
+    }
+    
+    fig = px.bar(indicadores_calc["media_tempo_por_prioridade"], 
+                 x='DS_PRIORIDADE', 
+                 y='TEMPO_TOTAL',
+                 title='Tempo Médio por Prioridade',
+                 color='DS_PRIORIDADE',  # Usar DS_PRIORIDADE para aplicar as cores
+                 color_discrete_map=color_map)  # Aplicar o mapa de cores
     st.plotly_chart(fig)
 
 
