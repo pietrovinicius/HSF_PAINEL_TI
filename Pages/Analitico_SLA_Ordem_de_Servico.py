@@ -342,7 +342,7 @@ def exibir_tipos_os(df):
     if df.empty:
        st.warning("Não há dados para exibir o gráfico de tipos de O.S")
        return
-    print(f"'DESCRICAO:\n{df['DESCRICAO'].head(5)}\n")
+    print(f"\n=================================================\n{df['DESCRICAO']}\n{df['DESCRICAO'].head(5)}\n")
     tipos_os = df['DESCRICAO'].str.lower().copy()
     
     def categorizar_tipo_os(texto):
@@ -372,14 +372,24 @@ def exibir_tipos_os(df):
         'Outros': 'gray'
     }
     
-
     fig = px.bar(tipos_contagem, 
                  x='TIPO_OS', 
                  y='QUANTIDADE', 
                  title='Distribuição de Tipos de O.S',
                  color='TIPO_OS',
-                 color_discrete_map = color_map
+                 color_discrete_map = color_map,
+                 text_auto=True
                 )
+                
+    fig.update_layout(
+        legend_title_text="Tipos de O.S",
+         margin=dict(l=20, r=20, t=60, b=20),
+         #template="plotly_dark", # Paletas de cores que o plotly oferece, pode usar: "plotly_dark" ou "plotly"
+        title_font=dict(size=17),
+    )
+
+    fig.update_xaxes(title_text='')  # Remover o rótulo do eixo x
+    fig.update_traces(textposition='outside',  textfont_family="Arial", textfont_size=13 )
     st.plotly_chart(fig)
     
 
