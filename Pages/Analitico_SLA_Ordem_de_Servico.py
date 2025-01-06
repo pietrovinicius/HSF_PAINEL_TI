@@ -12,6 +12,8 @@ import locale
 import datetime
 import plotly.express as px
 import io
+import plotly.colors as pc
+import random
 
 # Configuração da página Streamlit
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed",
@@ -213,8 +215,21 @@ def exibir_grafico_pizza(df):
         return
     sla_counts = df['SLA'].value_counts().reset_index()
     sla_counts.columns = ['SLA', 'count']
-    fig = px.pie(sla_counts, names='SLA', values='count', title="Distribuição de Ordens por SLA")
+    
+    color_map = {
+        'Atendido': 'lightgreen',
+        'Excedido': 'lightcoral',
+        'Fora do SLA': 'gray'
+    }
+    
+    fig = px.pie(sla_counts, 
+                 names='SLA', 
+                 values='count', 
+                 title="Distribuição de Ordens por SLA",
+                 color='SLA',
+                 color_discrete_map = color_map)
     st.plotly_chart(fig)
+
 
 def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
     """Exibe o gráfico de barras do tempo médio por prioridade."""
@@ -238,7 +253,6 @@ def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
                  color_discrete_map=color_map)  # Aplicar o mapa de cores
     st.plotly_chart(fig)
 
-
 def preparar_download_excel(df, filename="dados.xlsx"):
     """Converte um DataFrame em um arquivo Excel na memória para download."""
     output = io.BytesIO()
@@ -246,8 +260,7 @@ def preparar_download_excel(df, filename="dados.xlsx"):
         df.to_excel(writer, sheet_name='Sheet1', index=False)
     return output.getvalue()
 
-
-def exibir_principais_setores(df, top_n = 10):
+def exibir_principais_setores(df, top_n=10):
     """
         Exibe os principais setores que abriram mais O.S. em um gráfico de barras.
         Args:
@@ -261,9 +274,25 @@ def exibir_principais_setores(df, top_n = 10):
     setores_contagem = df['SETOR_ATENDIMENTO'].value_counts().nlargest(top_n).reset_index()
     setores_contagem.columns = ['SETOR_ATENDIMENTO', 'QUANTIDADE']
 
-    fig = px.bar(setores_contagem, x='SETOR_ATENDIMENTO', y='QUANTIDADE', title=f'Top {top_n} Setores com Mais O.S')
-    st.plotly_chart(fig)
+    num_setores = len(setores_contagem)
+    
+    # Gerar cores aleatórias, agora em loop, para garantir que sempre terá uma cor para cada item.
+    color_scale = pc.qualitative.Set1  # Selecione a paleta de cores que preferir
+    color_list = []
+    for i in range(num_setores):
+        color_list.append(color_scale[i % len(color_scale)])
 
+
+    color_map = dict(zip(setores_contagem['SETOR_ATENDIMENTO'], color_list))
+    
+    fig = px.bar(setores_contagem, 
+                 x='SETOR_ATENDIMENTO', 
+                 y='QUANTIDADE', 
+                 title=f'Top {top_n} Setores com Mais O.S',
+                 color = 'SETOR_ATENDIMENTO',
+                 color_discrete_map = color_map
+                )
+    st.plotly_chart(fig)
 
 
 def calcular_horas_por_analista(df):
