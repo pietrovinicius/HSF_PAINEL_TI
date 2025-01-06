@@ -207,64 +207,6 @@ def formatar_horas(horas):
     minutos = int((horas - horas_int) * 60)
     return f"{horas_int} hora(s) {minutos:02} minuto(s)"
 
-
-def exibir_grafico_pizza(df):
-    """Exibe o gráfico de pizza de distribuição de SLA."""
-    if df.empty:
-        st.warning("Não há dados para exibir o gráfico de pizza.")
-        return
-    sla_counts = df['SLA'].value_counts().reset_index()
-    sla_counts.columns = ['SLA', 'count']
-    
-    color_map = {
-        'Atendido': 'lightgreen',
-        'Excedido': 'lightcoral',
-        'Fora do SLA': 'gray'
-    }
-    
-    fig = px.pie(sla_counts, 
-                 names='SLA', 
-                 values='count', 
-                 title="Distribuição de Ordens por SLA",
-                 color='SLA',
-                 color_discrete_map = color_map)
-    st.plotly_chart(fig)
-
-def exibir_principais_setores(df, top_n=10):
-    """
-        Exibe os principais setores que abriram mais O.S. em um gráfico de barras.
-        Args:
-            df (pd.DataFrame): DataFrame contendo os dados.
-            top_n (int): Número de setores a serem exibidos.
-    """
-    if df.empty:
-        st.warning("Não há dados para exibir o gráfico de setores.")
-        return
-
-    setores_contagem = df['SETOR_ATENDIMENTO'].value_counts().nlargest(top_n).reset_index()
-    setores_contagem.columns = ['SETOR_ATENDIMENTO', 'QUANTIDADE']
-
-    num_setores = len(setores_contagem)
-    
-    # Gerar cores aleatórias, agora em loop, para garantir que sempre terá uma cor para cada item.
-    color_scale = pc.qualitative.Set1  # Selecione a paleta de cores que preferir
-    color_list = []
-    for i in range(num_setores):
-        color_list.append(color_scale[i % len(color_scale)])
-
-
-    color_map = dict(zip(setores_contagem['SETOR_ATENDIMENTO'], color_list))
-    
-    fig = px.bar(setores_contagem, 
-                 x='SETOR_ATENDIMENTO', 
-                 y='QUANTIDADE', 
-                 title=f'Top {top_n} Setores com Mais O.S',
-                 color = 'SETOR_ATENDIMENTO',
-                 color_discrete_map = color_map
-                )
-    st.plotly_chart(fig)
-
-
 def calcular_horas_por_analista(df):
     """Calcula o tempo total em horas gasto por analista."""
     if df.empty:
@@ -303,6 +245,32 @@ def formatar_horas_df(df):
     df = df.drop('HORAS', axis=1)
     return df
 
+def exibir_grafico_pizza(df):
+    """Exibe o gráfico de pizza de distribuição de SLA."""
+    if df.empty:
+        st.warning("Não há dados para exibir o gráfico de pizza.")
+        return
+    sla_counts = df['SLA'].value_counts().reset_index()
+    sla_counts.columns = ['SLA', 'count']
+    
+    color_map = {
+        'Atendido': 'lightgreen',
+        'Excedido': 'lightcoral',
+        'Fora do SLA': 'gray'
+    }
+    
+    fig = px.pie(sla_counts, 
+                 names='SLA', 
+                 values='count', 
+                 title="Distribuição de Ordens por SLA",
+                 color='SLA',
+                 color_discrete_map = color_map)
+    fig.update_traces(
+        hovertemplate="<b>Status:</b> %{label}<br><b>Percentual:</b> %{percent:.2f}%"  # Personalizando o hovertemplate
+    )
+
+    st.plotly_chart(fig)
+
 def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
     """Exibe o gráfico de barras do tempo médio por prioridade."""
     if indicadores_calc["media_tempo_por_prioridade"].empty:
@@ -332,8 +300,14 @@ def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
         title_font=dict(size=17),
     )
     
-    fig.update_xaxes(title_text='Prioridade')  # Alterar o rótulo do eixo x
+    fig.update_xaxes(title_text='')  # Alterar o rótulo do eixo x
     fig.update_yaxes(title_text='Tempo Total (Min)') # Alterar o rótulo do eixo y
+    fig.update_traces(
+        textposition='outside',  
+        textfont_family="Arial", 
+        textfont_size=13,
+        hovertemplate="<b>Prioridade:</b> %{x}<br><b>Tempo Total (Min):</b> %{y}" # Personalizando o hovertemplate
+     )
     st.plotly_chart(fig)
     
 def exibir_tipos_os(df):
@@ -385,7 +359,7 @@ def exibir_tipos_os(df):
                 )
                 
     fig.update_layout(
-        legend_title_text="Tipos de O.S",
+        legend_title_text="",
          margin=dict(l=20, r=20, t=60, b=20),
          #template="plotly_dark", # Paletas de cores que o plotly oferece, pode usar: "plotly_dark" ou "plotly"
         title_font=dict(size=17),
@@ -393,7 +367,60 @@ def exibir_tipos_os(df):
 
     fig.update_xaxes(title_text='')  # Remover o rótulo do eixo x
     fig.update_yaxes(title_text='Quantidade') 
-    fig.update_traces(textposition='outside',  textfont_family="Arial", textfont_size=13 )
+    fig.update_traces(
+        textposition='outside',  
+        textfont_family="Arial", 
+        textfont_size=13,
+        hovertemplate="<b>Tipo:</b> %{x}<br><b>Quantidade:</b> %{y}" # Personalizando o hovertemplate
+     )
+    st.plotly_chart(fig)
+
+def exibir_principais_setores(df, top_n=10):
+    """
+        Exibe os principais setores que abriram mais O.S. em um gráfico de barras.
+        Args:
+            df (pd.DataFrame): DataFrame contendo os dados.
+            top_n (int): Número de setores a serem exibidos.
+    """
+    if df.empty:
+        st.warning("Não há dados para exibir o gráfico de setores.")
+        return
+
+    setores_contagem = df['SETOR_ATENDIMENTO'].value_counts().nlargest(top_n).reset_index()
+    setores_contagem.columns = ['SETOR_ATENDIMENTO', 'QUANTIDADE']
+
+    num_setores = len(setores_contagem)
+    
+    # Gerar cores aleatórias, agora em loop, para garantir que sempre terá uma cor para cada item.
+    color_scale = pc.qualitative.Set1  # Selecione a paleta de cores que preferir
+    color_list = []
+    for i in range(num_setores):
+        color_list.append(color_scale[i % len(color_scale)])
+
+
+    color_map = dict(zip(setores_contagem['SETOR_ATENDIMENTO'], color_list))
+    
+    fig = px.bar(setores_contagem, 
+                 x='SETOR_ATENDIMENTO', 
+                 y='QUANTIDADE', 
+                 title=f'Top {top_n} Setores com Mais O.S',
+                 color = 'SETOR_ATENDIMENTO',
+                 color_discrete_map = color_map
+                )
+        
+    fig.update_layout(
+        legend_title_text=" ",
+         margin=dict(l=20, r=20, t=60, b=20),
+         #template="plotly_dark", # Paletas de cores que o plotly oferece, pode usar: "plotly_dark" ou "plotly"
+        title_font=dict(size=17),
+    )
+    fig.update_xaxes(title_text='')  # Remover o rótulo do eixo x
+    fig.update_yaxes(title_text='')  # Remover o rótulo do eixo y
+    
+    fig.update_traces(
+      hovertemplate="<b>Setor:</b> %{x}<br><b>Quantidade:</b> %{y}"  # Personalizando o hovertemplate
+    )
+    
     st.plotly_chart(fig)
     
 
@@ -558,12 +585,14 @@ if __name__ == "__main__":
 
     st.write("---")
     # Exibindo os principais setores, segregação por tipo de setor, Calculo de horas por seto
-    col8, colVazio0 = st.columns(2)
-    with col8:  
-        exibir_principais_setores(df_filtered_mes)
-        
+    #col8, colVazio0 = st.columns(2)
+    #with col8:  
+    #    exibir_principais_setores(df_filtered_mes)
+    exibir_principais_setores(df_filtered_mes)
     st.write("---")
     col10, col11, colHOMEM_X_HORA = st.columns(3)
+    
+    
         
     with col10:
         horas_por_setor = calcular_horas_por_setor(df_filtered_mes)
