@@ -1,83 +1,75 @@
-#03/01/2025
-#@PLima
-#HFS - PAINEL DE DIVERSOS DADOS E INDICADORES
-#Analítico SLA - Ordem de Serviço
-#RELATORIO 1618 - HSF - Analítico SLA - Ordem de Serviço (EXCEL)
+# 03/01/2025
+# @PLima
+# HFS - PAINEL DE DIVERSOS DADOS E INDICADORES
+# Analítico SLA - Ordem de Serviço
+# RELATORIO 1618 - HSF - Analítico SLA - Ordem de Serviço (EXCEL)
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import os
 import oracledb
-import pandas as pd
-import time
 import locale
 import datetime
 import plotly.express as px
-import io  # Para lidar com arquivos na memória
+import io
 
-# Configurando pagina para exibicao em modo WIDE:
-st.set_page_config(layout="wide", initial_sidebar_state="collapsed", page_title="Analítico SLA - Ordem de Serviço")
+# Configuração da página Streamlit
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed",
+                   page_title="Analítico SLA - Ordem de Serviço")
 
-# Aumentando exiubição do dataframe no Streamlit:
+# Aumentando exibição do DataFrame no Streamlit
 pd.set_option("styler.render.max_elements", 1249090)
 
 
-def agora():
-    agora = datetime.datetime.now()
-    agora = agora.strftime("%Y-%m-%d %H-%M-%S")
-    return str(agora)
 
 
-# apontamento para usar o Think Mod
+def obter_timestamp_atual():
+    """Retorna o timestamp atual no formato YYYY-MM-DD HH-MM-SS."""
+    return datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+
+
 def encontrar_diretorio_instantclient(
         nome_pasta="instantclient-basiclite-windows.x64-23.6.0.24.10\\instantclient_23_6"):
-    # Obtém o diretório do script atual
+    """
+        Encontra o diretório do Instant Client Oracle.
+        Args:
+            nome_pasta (str): Nome da pasta contendo o Instant Client.
+        Returns:
+            str: Caminho completo para o diretório do Instant Client ou None se não encontrado.
+    """
     diretorio_atual = os.path.dirname(os.path.abspath(__file__))
-
-    # Constrói o caminho completo para a pasta do Instant Client
     caminho_instantclient = os.path.join(diretorio_atual, nome_pasta)
 
-    # Verifica se a pasta existe
     if os.path.exists(caminho_instantclient):
         return caminho_instantclient
     else:
-        print(f"A pasta '{nome_pasta}' nao foi encontrada na raiz do aplicativo.")
+        st.error(f"A pasta '{nome_pasta}' não foi encontrada na raiz do aplicativo.")
         return None
 
 
-# @st.cache_data
 @st.cache_data
-def REL_1618():
+def obter_dados_relatorio_1618():
+    """
+        Obtém os dados do relatório 1618 do banco de dados Oracle.
+        Returns:
+            pandas.DataFrame: DataFrame contendo os dados do relatório.
+    """
     try:
-        # Chamar a função para obter o caminho do Instant Client
         caminho_instantclient = encontrar_diretorio_instantclient()
-
-        # Usar o caminho encontrado para inicializar o Oracle Client
         if caminho_instantclient:
-            print(f'if caminho_instantclient:\n')
-            print(f'oracledb.init_oracle_client(lib_dir=caminho_instantclient)\n')
             oracledb.init_oracle_client(lib_dir=caminho_instantclient)
         else:
-            print("Erro ao localizar o Instant Client. Verifique o nome da pasta e o caminho.")
+            st.error("Erro ao localizar o Instant Client. Verifique o nome da pasta e o caminho.")
+            return pd.DataFrame()  # Retorna um DataFrame vazio em caso de erro
 
         connection = oracledb.connect(user="TASY", password="aloisk", dsn="192.168.5.9:1521/TASYPRD")
 
-        with connection:
-            print(f'with oracledb.connect(user=un, password=pw, dsn=cs) as connection\n')
-
-            print(f'\nconnection.current_schema: {connection.current_schema}')
-
-            with connection.cursor() as cursor:
-                print(f'with connection.cursor() as cursor:\n')
-
-                #####################################################################################
-                # QUERY:
-                sql = """              
-                    SELECT 
+        with connection.cursor() as cursor:
+            sql = """
+               SELECT 
                     ATP.NR_SEQUENCIA AS NR_ORDEM,
-                    INITCAP(OBTER_NOME_USUARIO(ATP.NM_USUARIO_EXEC)) AS Analista,
-                    --ATP.DT_ORDEM_SERVICO,
+                   
+                    ABREVIA_NOME(INITCAP(OBTER_NOME_USUARIO(ATP.NM_USUARIO_EXEC)), 'A') AS ANALISTA,
                     EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) AS ANO,
                     TO_CHAR(ATP.DT_ORDEM_SERVICO, 'Month') AS MES,
                     EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO) AS OS_MES,
@@ -85,82 +77,88 @@ def REL_1618():
                     DECODE(ATP.IE_PRIORIDADE, 'A', 'Alta', 'M', 'Média', 'E','Emergência', 'Fora da Prioridade') AS DS_PRIORIDADE, 
                     DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) AS META_SLA,
                     OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, DT_FIM_REAL, 'TM') AS TEMPO_TOTAL,
-
-                    TO_CHAR(ATP.DT_FIM_REAL,'dd/mm/yyyy') AS DT_FIM_REAL,
-
+                    TO_CHAR(ATP.DT_INICIO_REAL ,'dd/mm/yyyy hh24:mi') AS DT_INICIO_REAL,
+                    TO_CHAR(ATP.DT_FIM_REAL,'dd/mm/yyyy hh24:mi') AS DT_FIM_REAL,
                     CASE  
-                    WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) >=  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'Atendido'
-                    WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) <  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'Excedido'
-                    ELSE 'Fora do SLA'
-                    END AS SLA
+                        WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) >=  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'Atendido'
+                        WHEN DECODE(ATP.IE_PRIORIDADE, 'A', 240, 'M', 360, 'E', 10) <  OBTER_DIF_DATA(ATP.DT_ORDEM_SERVICO, ATP.DT_FIM_REAL, 'TM') THEN 'Excedido'
+                        ELSE 'Fora do SLA'
+                    END AS SLA,
+                    SAT.CD_SETOR_ATENDIMENTO,
+                    INITCAP(SAT.DS_SETOR_ATENDIMENTO) AS SETOR_ATENDIMENTO,
+                    ATP.DS_OBSERVACAO AS DESCRICAO
                 FROM MAN_ORDEM_SERVICO ATP
                 INNER JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
                 INNER JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
                 INNER JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
                 LEFT JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
-                --WHERE ATP.DT_ORDEM_SERVICO	BETWEEN sysdate -90  and sysdate --:DT_INICIAL AND :DT_FINAL
-                --AND ATP.IE_STATUS_ORDEM = 3
                 WHERE ATP.IE_STATUS_ORDEM = 3
-
+                AND ATP.NM_USUARIO_EXEC IN (
+                    'amcabral' -- Alex De Mendonca Cabral
+                    ,'aptsilva'-- Alexandro Pinheiro Tavares Silva
+                    ,'acmmeireles' --Ana Carolina Mendonca Meireles Pelegrino
+                    ,'iffialho' -- Ingrid Firmino Fialho
+                    ,'jbfilho' --João Batista Gomes De Sousa Filho
+                    ,'kloliveira' -- Kevin Lourenco De Oliveira
+                    ,'lsojunqueira' -- Lucas Souza De Oliveira Junqueira
+                    ,'pvplima'--	Pietro Vinicius Da Penha De Lima
+                )
                 ORDER BY
                     EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) DESC,
                     EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO) ASC,
                     ATP.NR_SEQUENCIA ASC
-                    """
-                #####################################################################################
-
-                # Executando a query:
-                # print(f'cursor.execute(sql)\n{sql}')
-                cursor.execute(sql)
-                results = cursor.fetchall()
-                df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])
-
-                # Visualizar os primeiros 5 registros
-                print(f'data_frame:\n{df.head(5)}')
-                print(f"\nExemplo:\n{df.sample()}")
-                print(f"\nTamanho:{df.shape}")
-
-                print("DataFrame gerado com sucesso!")
-
+                """
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])
+            st.success(f"DataFrame gerado com sucesso! - {obter_timestamp_atual()}")
+            return df
+    except oracledb.Error as e:
+        st.error(f"Erro no Oracle: {e}. {obter_timestamp_atual()}")
+        return pd.DataFrame()  # Retorna um DataFrame vazio em caso de erro
     except Exception as erro:
-        print(f"Erro Inexperado:\n{erro}")
-
-    return df
+        st.error(f"Erro Inesperado: {erro}. {obter_timestamp_atual()}")
+        return pd.DataFrame()  # Retorna um DataFrame vazio em caso de erro
+    
 
 
 def sla_cor_status(val):
+    """Aplica estilos de cor com base no status SLA."""
     if val == 'Excedido':
-        return 'background-color: yellow; color: black ; font-weight: bold'  # Amarelo com texto preto para melhor contraste
+        return 'background-color: yellow; color: black ; font-weight: bold'
     elif val == 'Em análise':
-        return 'background-color: lightblue; color: black ; font-weight: bold'  # Verde claro com texto preto
+        return 'background-color: lightblue; color: black ; font-weight: bold'
     elif val == 'Sim':
-        return 'background-color: sandybrown; color: black ; font-weight: bold;'  # Amarelo com texto preto para melhor contraste
+        return 'background-color: sandybrown; color: black ; font-weight: bold;'
     else:
         return ''
 
 
-def indicadores(df_rel_1618):
-    # Total de ordens
-    total_ordens = len(df_rel_1618)
+def calcular_indicadores(df):
+    """Calcula os indicadores de SLA."""
+    if df.empty:
+        return {
+            "total_ordens": 0,
+            "total_ordens_no_sla": 0,
+            "total_ordens_fora_sla": 0,
+            "percentual_ordens_no_sla": 0,
+            "percentual_ordens_fora_sla": 0,
+            "media_tempo_total": 0,
+            "media_tempo_por_prioridade": pd.DataFrame(columns=['DS_PRIORIDADE', 'TEMPO_TOTAL']),
+              "media_tempo_total_em_horas" : 0
+        }
 
-    # Total de Ordens dentro do SLA
-    total_ordens_no_sla = len(df_rel_1618[df_rel_1618['SLA'] == 'Atendido'])
-
-    # Total de Ordens fora do SLA
-    total_ordens_fora_sla = len(df_rel_1618[df_rel_1618['SLA'] == 'Excedido'])
-
-    # Percentual de Ordens no SLA
+    total_ordens = len(df)
+    total_ordens_no_sla = len(df[df['SLA'] == 'Atendido'])
+    total_ordens_fora_sla = len(df[df['SLA'] == 'Excedido'])
     percentual_ordens_no_sla = (total_ordens_no_sla / total_ordens) * 100 if total_ordens > 0 else 0
-
-    # Percentual de Ordens fora do SLA
     percentual_ordens_fora_sla = (total_ordens_fora_sla / total_ordens) * 100 if total_ordens > 0 else 0
+    df['TEMPO_TOTAL'] = df['TEMPO_TOTAL'].astype(int)
+    media_tempo_total = df['TEMPO_TOTAL'].mean()
+    media_tempo_por_prioridade = df.groupby('DS_PRIORIDADE')['TEMPO_TOTAL'].mean().reset_index()
 
-    # Tempo médio total
-    df_rel_1618['TEMPO_TOTAL'] = df_rel_1618['TEMPO_TOTAL'].astype(int)  # Garante que a coluna seja numérica
-    media_tempo_total = df_rel_1618['TEMPO_TOTAL'].mean()
+    media_tempo_total_em_horas = media_tempo_total / 60 if media_tempo_total > 0 else 0
 
-    # Tempo médio por prioridade
-    media_tempo_por_prioridade = df_rel_1618.groupby('DS_PRIORIDADE')['TEMPO_TOTAL'].mean().reset_index()
 
     return {
         "total_ordens": total_ordens,
@@ -169,127 +167,249 @@ def indicadores(df_rel_1618):
         "percentual_ordens_no_sla": percentual_ordens_no_sla,
         "percentual_ordens_fora_sla": percentual_ordens_fora_sla,
         "media_tempo_total": media_tempo_total,
-        "media_tempo_por_prioridade": media_tempo_por_prioridade
+        "media_tempo_por_prioridade": media_tempo_por_prioridade,
+        "media_tempo_total_em_horas" : media_tempo_total_em_horas
     }
 
+def calcular_horas_por_setor(df):
+  """Calcula o tempo total em horas gasto por setor."""
+  if df.empty:
+        return pd.DataFrame(columns=['SETOR_ATENDIMENTO', 'HORAS'])
 
-def grafico_pizza(df_rel_1618):
-    sla_counts = df_rel_1618['SLA'].value_counts().reset_index()
+  df['TEMPO_TOTAL'] = df['TEMPO_TOTAL'].astype(int)
+  horas_por_setor = df.groupby('SETOR_ATENDIMENTO')['TEMPO_TOTAL'].sum().reset_index()
+  horas_por_setor['HORAS'] = horas_por_setor['TEMPO_TOTAL'] / 60
+  horas_por_setor = horas_por_setor.drop('TEMPO_TOTAL', axis = 1)
+  return horas_por_setor
+
+
+def exibir_grafico_pizza(df):
+    """Exibe o gráfico de pizza de distribuição de SLA."""
+    if df.empty:
+        st.warning("Não há dados para exibir o gráfico de pizza.")
+        return
+    sla_counts = df['SLA'].value_counts().reset_index()
     sla_counts.columns = ['SLA', 'count']
-
     fig = px.pie(sla_counts, names='SLA', values='count', title="Distribuição de Ordens por SLA")
     st.plotly_chart(fig)
 
 
-def grafico_barras_tempo_prioridade(indicadores_calc):
+def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
+    """Exibe o gráfico de barras do tempo médio por prioridade."""
+    if indicadores_calc["media_tempo_por_prioridade"].empty:
+        st.warning("Não há dados para exibir o gráfico de barras de tempo por prioridade.")
+        return
     fig = px.bar(indicadores_calc["media_tempo_por_prioridade"], x='DS_PRIORIDADE', y='TEMPO_TOTAL',
                  title='Tempo Médio por Prioridade')
     st.plotly_chart(fig)
 
 
-# Função para transformar DataFrame em Excel e disponibilizar o download
-def download_dataframe_as_excel(df, filename="dados.xlsx"):
-    """
-    Converte um DataFrame em um arquivo Excel na memória e prepara para download.
-
-    Args:
-        df (pd.DataFrame): O DataFrame a ser convertido.
-        filename (str): Nome do arquivo para download.
-
-    Returns:
-        bytes: Arquivo Excel no formato bytes.
-    """
+def preparar_download_excel(df, filename="dados.xlsx"):
+    """Converte um DataFrame em um arquivo Excel na memória para download."""
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, sheet_name='Sheet1', index=False)
-    processed_data = output.getvalue()
-    return processed_data
+    return output.getvalue()
+
+
+def exibir_principais_setores(df, top_n = 10):
+    """
+        Exibe os principais setores que abriram mais O.S. em um gráfico de barras.
+        Args:
+            df (pd.DataFrame): DataFrame contendo os dados.
+            top_n (int): Número de setores a serem exibidos.
+    """
+    if df.empty:
+        st.warning("Não há dados para exibir o gráfico de setores.")
+        return
+
+    setores_contagem = df['SETOR_ATENDIMENTO'].value_counts().nlargest(top_n).reset_index()
+    setores_contagem.columns = ['SETOR_ATENDIMENTO', 'QUANTIDADE']
+
+    fig = px.bar(setores_contagem, x='SETOR_ATENDIMENTO', y='QUANTIDADE', title=f'Top {top_n} Setores com Mais O.S')
+    st.plotly_chart(fig)
+
+
+def exibir_segregacao_por_tipo(df):
+    """
+         Exibe a segregação de O.S por tipo de setor (Assistencial, Administrativo, Manutenção).
+        Args:
+            df (pd.DataFrame): DataFrame contendo os dados.
+    """
+    if df.empty:
+        st.warning("Não há dados para exibir a segregação por tipo de setor.")
+        return
+
+    # Definir um mapeamento de setores para tipos
+    mapeamento_setores = {
+        "Ambulatório": "Assistencial",
+        "Centro Cirúrgico": "Assistencial",
+        "Recepção Internação": "Assistencial",
+        "Ambulatório de Especialidades": "Assistencial",
+        "SND": "Assistencial",
+        "Recepção Emergência": "Assistencial",
+        "CTI A": "Assistencial",
+        "CTI B": "Assistencial",
+        "Farmácia Central": "Assistencial",
+        "CTI C - TX 18": "Assistencial",
+        "Faturamento": "Administrativo",
+        "Áreas Comuns": "Administrativo",
+        "EMORP - Áreas Comuns": "Administrativo",
+        "SESMT": "Administrativo"
+    }
+    
+    # aplicar o mapeamento na coluna de setores
+    df['TIPO_SETOR'] = df['SETOR_ATENDIMENTO'].map(mapeamento_setores)
+
+    # Preencher setores que não foram mapeados com 'Manutenção'
+    df['TIPO_SETOR'] = df['TIPO_SETOR'].fillna('Manutenção')
+
+
+    segregacao_contagem = df['TIPO_SETOR'].value_counts().reset_index()
+    segregacao_contagem.columns = ['TIPO_SETOR', 'QUANTIDADE']
+
+    fig = px.bar(segregacao_contagem, x='TIPO_SETOR', y='QUANTIDADE', title='Segregação de O.S por Tipo de Setor')
+    st.plotly_chart(fig)
+
+def calcular_horas_por_analista(df):
+    """Calcula o tempo total em horas gasto por analista."""
+    if df.empty:
+        return pd.DataFrame(columns=['ANALISTA', 'HORAS', 'N° DE O.S'])
+
+    df['TEMPO_TOTAL'] = df['TEMPO_TOTAL'].astype(int)
+    horas_por_analista = df.groupby('ANALISTA').agg(
+        HORAS=pd.NamedAgg(column='TEMPO_TOTAL', aggfunc='sum'),
+        N_OS=pd.NamedAgg(column='NR_ORDEM', aggfunc='nunique')
+    ).reset_index()
+
+    horas_por_analista['HORAS'] = horas_por_analista['HORAS'] / 60
+    return horas_por_analista
+
+
+def exibir_tipos_os(df):
+    """
+      Exibe um gráfico de barras da distribuição de tipos de O.S.
+    Args:
+        df (pd.DataFrame): DataFrame contendo os dados.
+    """
+    if df.empty:
+       st.warning("Não há dados para exibir o gráfico de tipos de O.S")
+       return
+    tipos_os = df['DESCRICAO'].str.lower().copy()
+    
+    def categorizar_tipo_os(texto):
+      if texto is None:
+        return 'Outros'
+      if 'corretiva' in texto:
+          return 'Corretiva'
+      elif 'preventiva' in texto:
+          return 'Preventiva'
+      elif 'desenvolvimento' in texto:
+          return 'Desenvolvimento'
+      elif 'projeto' in texto:
+          return 'Projetos'
+      else:
+          return 'Outros'
+    
+    df['TIPO_OS'] = tipos_os.apply(categorizar_tipo_os)
+
+    tipos_contagem = df['TIPO_OS'].value_counts().reset_index()
+    tipos_contagem.columns = ['TIPO_OS', 'QUANTIDADE']
+
+    fig = px.bar(tipos_contagem, x='TIPO_OS', y='QUANTIDADE', title='Distribuição de Tipos de O.S')
+    st.plotly_chart(fig)
+def calcular_custo_materiais(df):
+    """Calcula o custo total e a quantidade de requisições de materiais."""
+    if df.empty:
+        return 0,0
+
+    #valores ficticios para testes:
+    custo_total = 5300.97
+    quantidade_requisicoes = 34
+
+
+    #para calculo real:
+    #custo_total = df['CUSTO_MATERIAL'].sum() # supondo que você tenha essa coluna
+    #quantidade_requisicoes = len(df) #para quantidade de requisições
+
+    return custo_total, quantidade_requisicoes
 
 
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
 if __name__ == "__main__":
-    # Configurando o idioma
+    print(f'__main__')
     locale.setlocale(locale.LC_ALL, 'pt_BR.utf8')
-    
-    st.logo(logo_path, size="large")
+
     st.write('# Analítico SLA - Ordem de Serviço')
 
-    # Geracao de Data Frame:
-    df_rel_1618 = REL_1618()
-
+    df_rel_1618 = obter_dados_relatorio_1618()
     # Tratamento de valores null:
     df_rel_1618 = df_rel_1618.fillna('-')
 
-    # tratamento de valores com casa decimal:
-    df_rel_1618['NR_ORDEM'] = df_rel_1618['NR_ORDEM'].apply(lambda x: "{:.0f}".format(x))
-    df_rel_1618['ANO'] = df_rel_1618['ANO'].apply(lambda x: "{:.0f}".format(x))
+    # Tratamento de Formatação de Números
+    for col in ['NR_ORDEM', 'ANO']:
+        if col in df_rel_1618.columns:
+            df_rel_1618[col] = df_rel_1618[col].apply(lambda x: f"{x:.0f}" if pd.notnull(x) else x)
 
     # tratamento do valor com .0:
     df_rel_1618['META_SLA'] = df_rel_1618['META_SLA'].astype(str).str.replace('.0', '')
 
     # Obtendo a lista de anos distintos
-    anos_distintos = df_rel_1618['ANO'].unique()
-    print(f'\n\nanos distintos: {anos_distintos}\n\n')
-
-    anos_distintos = sorted(anos_distintos, reverse=True)
-    print(f'\n\nanos distintos sorted: {anos_distintos}\n\n')
-
-    # Limita a lista de anos aos 3 primeiros:
+    anos_distintos = sorted(df_rel_1618['ANO'].unique(), reverse=True)
     anos_distintos = anos_distintos[:6]
-    print(f'\n\nanos distintos[:3]: {anos_distintos}\n\n')
 
-    # Inicializa o ano selecionado com o ano mais recente
+    # Inicializa o ano mais recente
     if 'ano_selecionado' not in st.session_state:
-        st.session_state['ano_selecionado'] = anos_distintos[0]
+        st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
 
-    # Criando os botões para selecionar o ano
-    col_anos = st.columns(len(anos_distintos))  # Agora cria uma coluna por botão
-    st.write('<style>div.row-widget.stButton {display: flex; justify-content: flex-start;}</style>',
-                 unsafe_allow_html=True)
-    for col, ano in zip(col_anos, anos_distintos):
-        if col.button(str(ano), key=f"btn_{ano}"):
-            st.session_state['ano_selecionado'] = ano
-    
-    # Filtrando o Data Frame pelo ano selecionado:
-    df_filtered_ano = df_rel_1618[df_rel_1618['ANO'] == st.session_state['ano_selecionado']]
-    
-    # Obtendo a lista de meses distintos para o ano selecionado:
+    # Cria os botões para selecionar o ano
+    if anos_distintos:
+        col_anos = st.columns(len(anos_distintos))
+        for col, ano in zip(col_anos, anos_distintos):
+            if col.button(str(ano), key=f"btn_{ano}"):
+                st.session_state['ano_selecionado'] = ano
+    else:
+        st.warning("Não há dados para exibir os filtros de anos.")
+
+    # Filtrando o Data Frame pelo ano selecionado
+    if st.session_state['ano_selecionado'] is not None:
+        df_filtered_ano = df_rel_1618[df_rel_1618['ANO'] == st.session_state['ano_selecionado']]
+    else:
+        df_filtered_ano = df_rel_1618.copy()
+
+    # Obtendo a lista de meses distintos para o ano selecionado
     meses_distintos = sorted(df_filtered_ano['OS_MES'].unique())
-    
+
     # Inicializa o mês selecionado, usando o primeiro mês disponível
     if 'mes_selecionado' not in st.session_state:
         st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
 
     # Criando os botões para selecionar o mês
     if meses_distintos:
-        
-        #Converte os números para nome do mês
         meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
-        
         col_meses = st.columns(len(meses_nomes))
-        
+
         for col, mes_nome in zip(col_meses, meses_nomes):
             if col.button(str(mes_nome), key=f"btn_mes_{mes_nome}"):
                 if mes_nome == "Todos":
                     st.session_state['mes_selecionado'] = None
                 else:
-                    mes_selecionado_os_mes = meses_distintos[meses_nomes.index(mes_nome)-1]
+                    mes_selecionado_os_mes = meses_distintos[meses_nomes.index(mes_nome) - 1]
                     st.session_state['mes_selecionado'] = mes_selecionado_os_mes
-
-        # Filtrando o data frame pelo mes selecionado
-        if st.session_state['mes_selecionado'] == None:
-            df_filtered_mes = df_filtered_ano
-        else:
-            df_filtered_mes = df_filtered_ano[df_filtered_ano['OS_MES'] == st.session_state['mes_selecionado']]
     else:
+        st.warning("Não há dados para exibir os filtros de meses.")
+
+    # Filtrando o data frame pelo mes selecionado
+    if st.session_state['mes_selecionado'] is None:
         df_filtered_mes = df_filtered_ano
-        st.write("Não há dados para esse ano")
+    else:
+        df_filtered_mes = df_filtered_ano[df_filtered_ano['OS_MES'] == st.session_state['mes_selecionado']]
 
     # Calculo de Indicadores
-    indicadores_calc = indicadores(df_filtered_mes)
+    indicadores_calc = calcular_indicadores(df_filtered_mes)
 
-    # colunas para exibir os indicadores:
+    # Colunas para exibir os indicadores
     col1, col2, col3, col4 = st.columns(4)
 
     # Exibição dos Indicadores
@@ -303,36 +423,80 @@ if __name__ == "__main__":
     with col3:
         st.metric("Ordens Fora do SLA",
                   value=f'{indicadores_calc["total_ordens_fora_sla"]} ({indicadores_calc["percentual_ordens_fora_sla"]:.2f}%)')
-    
-    with col4:
-        st.metric("Tempo Médio de Atendimento", value=f'{indicadores_calc["media_tempo_total"]:.2f}')
 
-    col10, col20 = st.columns(2)
-    with col10:
+    with col4:
+         st.metric("Tempo Médio de Atendimento", value=f'{indicadores_calc["media_tempo_total_em_horas"]:.2f} horas')
+    
+    st.write("---")
+
+    #Exibir graficos:
+    col5, col6, col7 = st.columns(3)
+
+    with col5:
         # Chamando o Grafico de Pizza
-        grafico_pizza(df_filtered_mes)
-        
-    with col20:
+        exibir_grafico_pizza(df_filtered_mes)
+
+    with col6:
         # Chamando o Gráfico de Barras com Tempo por prioridade:
-        grafico_barras_tempo_prioridade(indicadores_calc)
+        exibir_grafico_barras_tempo_prioridade(indicadores_calc)
+
+    with col7:
+        # Chamando o Gráfico de tipo de OS:
+        exibir_tipos_os(df_filtered_mes)
+
+
+    st.write("---")
+    # Exibindo os principais setores, segregação por tipo de setor, Calculo de horas por seto
+    col8, col9 = st.columns(2)
+    with col8:  
+        exibir_principais_setores(df_filtered_mes)
+    with col9:
+        exibir_segregacao_por_tipo(df_filtered_mes)
+        
+    st.write("---")
+    col10, col11 = st.columns(2)
+    with col10:  
+        horas_por_setor = calcular_horas_por_setor(df_filtered_mes)
+        if not horas_por_setor.empty:
+            st.subheader("Horas Gastas por Setor")
+            st.dataframe(horas_por_setor, hide_index=True)
+        else:
+            st.warning("Não há dados para exibir as horas por setor.")
+    with col11:  
+        # Calculo de Horas por analista:
+        horas_por_analista = calcular_horas_por_analista(df_filtered_mes)
+        if not horas_por_analista.empty:
+            st.subheader("Horas Gastas por Analista")
+            st.dataframe(horas_por_analista, hide_index=True)
+        else:
+            st.warning("Não há dados para exibir as horas por analista.")
+
+    # Principais Motivos para Abertura de OS:
+
+     # Custo por requisição de materiais:
+    st.write("---")
+    custo_total, quantidade_requisicoes = calcular_custo_materiais(df_filtered_mes)
+    st.subheader("Custo por Solicitação de Materiais")
+    st.write(f"Valor Total: R$ {custo_total:.2f}")
+    st.write(f"Quantidade de Requisições: {quantidade_requisicoes}")
+
 
     # Criar uma nova linha abaixo dos indicadores para o botão de download
-    st.write("---")  # Linha separadora
-    
+    st.write("---")
+    st.write('## Data Frame completo das O.S.:')
     # Estilo do DataFrame
     df_styled = df_filtered_mes.style.applymap(sla_cor_status, subset=['SLA'])
-    
+
     # Exibindo o dataframe:
     st.dataframe(df_styled, hide_index=True, use_container_width=True)
-    
+
     # Disponibilizar o botão de download
-    download_xlsx = download_dataframe_as_excel(df_filtered_mes)
+    download_xlsx = preparar_download_excel(df_filtered_mes)
     st.download_button(
         label="Download em XLSX",
         data=download_xlsx,
         file_name='dados_sla.xlsx',
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-
-    # Criar uma nova linha abaixo dos indicadores para o botão de download
-    st.write("---")  # Linha separadora
+    # Criar uma nova linha abaixo do botão de download
+    st.write("---")
