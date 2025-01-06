@@ -86,7 +86,12 @@ def obter_dados_relatorio_1618():
                     END AS SLA,
                     SAT.CD_SETOR_ATENDIMENTO,
                     INITCAP(SAT.DS_SETOR_ATENDIMENTO) AS SETOR_ATENDIMENTO,
-                        ATP.DS_OBSERVACAO AS DESCRICAO,
+                    (
+                        SELECT 
+                            DS_TIPO
+                        FROM MAN_TIPO_ORDEM_SERVICO
+                        WHERE NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
+                    ) AS DESCRICAO,
                     DECODE(
                     --Todas=0,Aberta=1,Processo=2,Encerradas=3,
                         ATP.IE_STATUS_ORDEM,
@@ -248,46 +253,6 @@ def exibir_principais_setores(df, top_n = 10):
     st.plotly_chart(fig)
 
 
-def exibir_segregacao_por_tipo(df):
-    """
-         Exibe a segregação de O.S por tipo de setor (Assistencial, Administrativo, Manutenção).
-        Args:
-            df (pd.DataFrame): DataFrame contendo os dados.
-    """
-    if df.empty:
-        st.warning("Não há dados para exibir a segregação por tipo de setor.")
-        return
-
-    # Definir um mapeamento de setores para tipos
-    mapeamento_setores = {
-        "Ambulatório": "Assistencial",
-        "Centro Cirúrgico": "Assistencial",
-        "Recepção Internação": "Assistencial",
-        "Ambulatório de Especialidades": "Assistencial",
-        "SND": "Assistencial",
-        "Recepção Emergência": "Assistencial",
-        "CTI A": "Assistencial",
-        "CTI B": "Assistencial",
-        "Farmácia Central": "Assistencial",
-        "CTI C - TX 18": "Assistencial",
-        "Faturamento": "Administrativo",
-        "Áreas Comuns": "Administrativo",
-        "EMORP - Áreas Comuns": "Administrativo",
-        "SESMT": "Administrativo"
-    }
-    
-    # aplicar o mapeamento na coluna de setores
-    df['TIPO_SETOR'] = df['SETOR_ATENDIMENTO'].map(mapeamento_setores)
-
-    # Preencher setores que não foram mapeados com 'Manutenção'
-    df['TIPO_SETOR'] = df['TIPO_SETOR'].fillna('Manutenção')
-
-
-    segregacao_contagem = df['TIPO_SETOR'].value_counts().reset_index()
-    segregacao_contagem.columns = ['TIPO_SETOR', 'QUANTIDADE']
-
-    fig = px.bar(segregacao_contagem, x='TIPO_SETOR', y='QUANTIDADE', title='Segregação de O.S por Tipo de Setor')
-    st.plotly_chart(fig)
 
 def calcular_horas_por_analista(df):
     """Calcula o tempo total em horas gasto por analista."""
@@ -313,6 +278,21 @@ def calcular_homem_hora(df):
     homem_hora = (total_minutos / num_analistas) / 60 if num_analistas > 0 else 0
     return homem_hora
 
+def formatar_horas_df(df):
+    """Formata a coluna 'HORAS' de um DataFrame para 'X horas Y minutos'."""
+    if df.empty:
+      return df
+    
+    def formatar_horas_individual(horas):
+        horas_int = int(horas)
+        minutos = int((horas - horas_int) * 60)
+        return f"{horas_int} hora(s) {minutos:02} minuto(s)"
+
+    df['HORAS_FORMATADA'] = df['HORAS'].apply(formatar_horas_individual)
+    df = df.drop('HORAS', axis=1)
+    return df
+
+
 def exibir_tipos_os(df):
     """
       Exibe um gráfico de barras da distribuição de tipos de O.S.
@@ -322,6 +302,7 @@ def exibir_tipos_os(df):
     if df.empty:
        st.warning("Não há dados para exibir o gráfico de tipos de O.S")
        return
+    print(f"\n=================================================\n{df['DESCRICAO']}\n{df['DESCRICAO'].head(5)}\n")
     tipos_os = df['DESCRICAO'].str.lower().copy()
     
     def categorizar_tipo_os(texto):
@@ -345,6 +326,7 @@ def exibir_tipos_os(df):
 
     fig = px.bar(tipos_contagem, x='TIPO_OS', y='QUANTIDADE', title='Distribuição de Tipos de O.S')
     st.plotly_chart(fig)
+
 def calcular_custo_materiais(df):
     """Calcula o custo total e a quantidade de requisições de materiais."""
     if df.empty:
@@ -500,11 +482,9 @@ if __name__ == "__main__":
 
     st.write("---")
     # Exibindo os principais setores, segregação por tipo de setor, Calculo de horas por seto
-    col8, col9 = st.columns(2)
+    col8, colVazio0 = st.columns(2)
     with col8:  
         exibir_principais_setores(df_filtered_mes)
-    with col9:
-        exibir_segregacao_por_tipo(df_filtered_mes)
         
     st.write("---")
     col10, col11, colHOMEM_X_HORA = st.columns(3)
@@ -512,9 +492,15 @@ if __name__ == "__main__":
     with col10:
         horas_por_setor = calcular_horas_por_setor(df_filtered_mes)
         if not horas_por_setor.empty:
-            st.subheader("Horas Gastas por Setor")
+            st.subheader("Horas Gastas por Setor:")
             horas_por_setor['HORAS_FORMATADA'] = horas_por_setor['HORAS'].apply(formatar_horas)
-            st.dataframe(horas_por_setor[['SETOR_ATENDIMENTO','HORAS_FORMATADA']], hide_index=True)
+            horas_por_setor = horas_por_setor[['SETOR_ATENDIMENTO', 'HORAS_FORMATADA']].rename(
+                    columns={
+                                'SETOR_ATENDIMENTO': 'Setor',
+                                'HORAS_FORMATADA': 'Horas'
+                            }
+            )
+            st.dataframe(horas_por_setor, hide_index=True)
         else:
             st.warning("Não há dados para exibir as horas por setor.")  
     with col11:  
@@ -522,7 +508,16 @@ if __name__ == "__main__":
         horas_por_analista = calcular_horas_por_analista(df_filtered_mes)
         if not horas_por_analista.empty:
             st.subheader("Horas Gastas por Analista")
+            horas_por_analista = formatar_horas_df(horas_por_analista)
+            horas_por_analista = horas_por_analista[['ANALISTA', 'N_OS', 'HORAS_FORMATADA']].rename(
+                columns={
+                            'ANALISTA': 'Analista', 
+                            'N_OS': 'Nº O.S.', 
+                            'HORAS_FORMATADA': 'Horas'
+                        }
+            )
             st.dataframe(horas_por_analista, hide_index=True)
+            print(f"DF horas_por_analista: \n{horas_por_analista.head(5)}")
         else:
             st.warning("Não há dados para exibir as horas por analista.")
     with colHOMEM_X_HORA:
@@ -549,6 +544,29 @@ if __name__ == "__main__":
     # Criar uma nova linha abaixo dos indicadores para o botão de download
     st.write("---")
     st.write('## Data Frame completo das O.S.:')
+    
+    #Renomeando colunas antes de exibir o data frame:
+    df_filtered_mes = df_filtered_mes[
+                                        [
+                                            'NR_ORDEM', 'ANALISTA', 'ANO','DATA','DS_PRIORIDADE', 
+                                            'TEMPO_TOTAL','DT_INICIO_REAL', 'DT_FIM_REAL', 'SLA',
+                                            'SETOR_ATENDIMENTO','STATUS_ORDEM'
+                                        ]
+                                    ].rename(columns={
+                                                    'NR_ORDEM' : ' Nº O.S.', 
+                                                    'ANALISTA' : 'Analista', 
+                                                    'ANO' : 'Ano', 
+                                                    'DATA' : 'Data', 
+                                                    'DS_PRIORIDADE' : 'Prioridade',
+                                                    'TEMPO_TOTAL' : 'Minutos', 
+                                                    'DT_INICIO_REAL' : 'Início', 
+                                                    'DT_FIM_REAL' : 'Fim', 
+                                                    'SLA' : 'SLA',
+                                                    'SETOR_ATENDIMENTO' : 'Setor',
+                                                    'STATUS_ORDEM' : 'Status'
+                                                    })
+    #st.dataframe(df_filtered_mes, hide_index=True, use_container_width=True)
+    
     # Estilo do DataFrame
     df_styled = df_filtered_mes.style.applymap(sla_cor_status, subset=['SLA'])
 
