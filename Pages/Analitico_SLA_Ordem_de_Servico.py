@@ -86,7 +86,15 @@ def obter_dados_relatorio_1618():
                     END AS SLA,
                     SAT.CD_SETOR_ATENDIMENTO,
                     INITCAP(SAT.DS_SETOR_ATENDIMENTO) AS SETOR_ATENDIMENTO,
-                    ATP.DS_OBSERVACAO AS DESCRICAO
+                        ATP.DS_OBSERVACAO AS DESCRICAO,
+                    DECODE(
+                    --Todas=0,Aberta=1,Processo=2,Encerradas=3,
+                        ATP.IE_STATUS_ORDEM,
+                        0, 'Todas',
+                        1,'Aberta',
+                        2,'Processo',
+                        3,'Encerradas'
+                    ) AS STATUS_ORDEM   
                 FROM MAN_ORDEM_SERVICO ATP
                 INNER JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
                 INNER JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
@@ -102,6 +110,7 @@ def obter_dados_relatorio_1618():
                     ,'kloliveira' -- Kevin Lourenco De Oliveira
                     ,'lsojunqueira' -- Lucas Souza De Oliveira Junqueira
                     ,'pvplima'--	Pietro Vinicius Da Penha De Lima
+                    , 'ymfcastro' --YAGO MATTOS FELIPPE DE CASTRO
                 )
                 ORDER BY
                     EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) DESC,
@@ -111,6 +120,9 @@ def obter_dados_relatorio_1618():
             cursor.execute(sql)
             results = cursor.fetchall()
             df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])
+            print(f"\nDF Tamanho:{df.shape}")
+            print(f"DF Colunas:\n{df.columns}")
+            print(f"\nDF Head(5):\n{df.head(5)}")
             st.success(f"DataFrame gerado com sucesso! - {obter_timestamp_atual()}")
             return df
     except oracledb.Error as e:
@@ -172,15 +184,21 @@ def calcular_indicadores(df):
     }
 
 def calcular_horas_por_setor(df):
-  """Calcula o tempo total em horas gasto por setor."""
-  if df.empty:
+    """Calcula o tempo total em horas gasto por setor."""
+    if df.empty:
         return pd.DataFrame(columns=['SETOR_ATENDIMENTO', 'HORAS'])
 
-  df['TEMPO_TOTAL'] = df['TEMPO_TOTAL'].astype(int)
-  horas_por_setor = df.groupby('SETOR_ATENDIMENTO')['TEMPO_TOTAL'].sum().reset_index()
-  horas_por_setor['HORAS'] = horas_por_setor['TEMPO_TOTAL'] / 60
-  horas_por_setor = horas_por_setor.drop('TEMPO_TOTAL', axis = 1)
-  return horas_por_setor
+    df['TEMPO_TOTAL'] = df['TEMPO_TOTAL'].astype(int)
+    horas_por_setor = df.groupby('SETOR_ATENDIMENTO')['TEMPO_TOTAL'].sum().reset_index()
+    horas_por_setor['HORAS'] = horas_por_setor['TEMPO_TOTAL'] / 60
+    horas_por_setor = horas_por_setor.drop('TEMPO_TOTAL', axis=1)
+    return horas_por_setor
+    
+def formatar_horas(horas):
+    """Formata as horas para o formato 'X horas Y minutos'."""
+    horas_int = int(horas)
+    minutos = int((horas - horas_int) * 60)
+    return f"{horas_int} hora(s) {minutos:02} minuto(s)"
 
 
 def exibir_grafico_pizza(df):
@@ -285,6 +303,15 @@ def calcular_horas_por_analista(df):
     horas_por_analista['HORAS'] = horas_por_analista['HORAS'] / 60
     return horas_por_analista
 
+def calcular_homem_hora(df):
+    """Calcula o indicador Homem x Hora."""
+    if df.empty:
+        return 0  # Retorna 0 se não houver dados
+
+    total_minutos = df['TEMPO_TOTAL'].astype(int).sum()
+    num_analistas = 8  # Número de analistas (fixo)
+    homem_hora = (total_minutos / num_analistas) / 60 if num_analistas > 0 else 0
+    return homem_hora
 
 def exibir_tipos_os(df):
     """
@@ -362,7 +389,9 @@ if __name__ == "__main__":
     # Inicializa o ano mais recente
     if 'ano_selecionado' not in st.session_state:
         st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
-
+        
+    st.write("---")
+    
     # Cria os botões para selecionar o ano
     if anos_distintos:
         col_anos = st.columns(len(anos_distintos))
@@ -387,6 +416,7 @@ if __name__ == "__main__":
 
     # Criando os botões para selecionar o mês
     if meses_distintos:
+        #inserido botao de todos e botoes para cada mes 
         meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
         col_meses = st.columns(len(meses_nomes))
 
@@ -400,15 +430,38 @@ if __name__ == "__main__":
     else:
         st.warning("Não há dados para exibir os filtros de meses.")
 
+    st.write("---")
+    
     # Filtrando o data frame pelo mes selecionado
     if st.session_state['mes_selecionado'] is None:
         df_filtered_mes = df_filtered_ano
     else:
         df_filtered_mes = df_filtered_ano[df_filtered_ano['OS_MES'] == st.session_state['mes_selecionado']]
-
+        print(f'\nElse do st.session_state:')
+        print(f"Ano selecionado: {st.session_state['ano_selecionado']}")
+        print(f"Nome do mes selecionado: {datetime.date(1900, int(st.session_state['mes_selecionado']), 1).strftime('%B')}")
+        
+        colA = st.columns(5)
+        with colA[0]:
+            #st.write(f"## {st.session_state['ano_selecionado']}")
+            #Verifica se um mes foi selecionado
+            if st.session_state['mes_selecionado'] != None:
+                st.write(f"# {st.session_state['ano_selecionado']} - {datetime.date(1900, int(st.session_state['mes_selecionado']), 1).strftime('%B')}:")
+            else:
+                st.write(f"# {st.session_state['ano_selecionado']} - Todos")
+        
+        #st.write(f"## Ano selecionado: {st.session_state['ano_selecionado']}")
+        #st.write(f"## Mês selecionado: {datetime.date(1900, int(st.session_state['mes_selecionado']), 1).strftime('%B')}")
+        
     # Calculo de Indicadores
     indicadores_calc = calcular_indicadores(df_filtered_mes)
+    print('\n===============================================\n')
+    print(f'indicadores_calc: \n{indicadores_calc}')
+    print('\n===============================================\n')
 
+    
+    
+    
     # Colunas para exibir os indicadores
     col1, col2, col3, col4 = st.columns(4)
 
@@ -454,14 +507,16 @@ if __name__ == "__main__":
         exibir_segregacao_por_tipo(df_filtered_mes)
         
     st.write("---")
-    col10, col11 = st.columns(2)
-    with col10:  
+    col10, col11, colHOMEM_X_HORA = st.columns(3)
+        
+    with col10:
         horas_por_setor = calcular_horas_por_setor(df_filtered_mes)
         if not horas_por_setor.empty:
             st.subheader("Horas Gastas por Setor")
-            st.dataframe(horas_por_setor, hide_index=True)
+            horas_por_setor['HORAS_FORMATADA'] = horas_por_setor['HORAS'].apply(formatar_horas)
+            st.dataframe(horas_por_setor[['SETOR_ATENDIMENTO','HORAS_FORMATADA']], hide_index=True)
         else:
-            st.warning("Não há dados para exibir as horas por setor.")
+            st.warning("Não há dados para exibir as horas por setor.")  
     with col11:  
         # Calculo de Horas por analista:
         horas_por_analista = calcular_horas_por_analista(df_filtered_mes)
@@ -470,15 +525,25 @@ if __name__ == "__main__":
             st.dataframe(horas_por_analista, hide_index=True)
         else:
             st.warning("Não há dados para exibir as horas por analista.")
+    with colHOMEM_X_HORA:
+        #TODO: exibir KPI de HOMEM X HORA
+        homem_hora = calcular_homem_hora(df_filtered_mes)
+        st.subheader("HOMEM X HORA:")
+        st.write(f"{homem_hora:.2f} Horas/Homem")
 
     # Principais Motivos para Abertura de OS:
 
      # Custo por requisição de materiais:
     st.write("---")
-    custo_total, quantidade_requisicoes = calcular_custo_materiais(df_filtered_mes)
-    st.subheader("Custo por Solicitação de Materiais")
-    st.write(f"Valor Total: R$ {custo_total:.2f}")
-    st.write(f"Quantidade de Requisições: {quantidade_requisicoes}")
+    
+    colCustos, colVazio0 = st.columns(2)
+            
+    with colCustos:
+        custo_total, quantidade_requisicoes = calcular_custo_materiais(df_filtered_mes)
+        st.subheader("Custo por Solicitação de Materiais")
+        st.write(f"Valor Total: R$ {custo_total:.2f}")
+        st.write(f"Quantidade de Requisições: {quantidade_requisicoes}")
+        
 
 
     # Criar uma nova linha abaixo dos indicadores para o botão de download
