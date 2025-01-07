@@ -373,7 +373,6 @@ def calcular_indicadores_por_analista(df):
         total_horas_analista = total_minutos // 60
         minutos_restantes_analista = total_minutos % 60
         horas_minutos = f"{total_horas_analista}h {minutos_restantes_analista}m"
-
         analistas_horas[analista] = horas_minutos
         
     print(f"*******\nAnalistas_horas: \n{analistas_horas}\n*******")
@@ -438,6 +437,10 @@ def exibir_grafico_pizza(df):
     status_counts.columns = ['STATUS', 'count']
     print(f"Status counts:\n{status_counts}")
 
+    # Calcula o percentual
+    total_count = status_counts['count'].sum()
+    status_counts['percent'] = (status_counts['count'] / total_count) * 100
+    
     # Mapeamento de cores
     color_map = {
         'Aberta': 'skyblue',
@@ -451,9 +454,10 @@ def exibir_grafico_pizza(df):
                  values='count',
                  title="Distribuição de Ordens por Status",
                  color='STATUS',
-                 color_discrete_map=color_map)
+                 color_discrete_map=color_map,
+                 )
     fig.update_traces(
-         hovertemplate="<b>Status:</b> %{label}<br><b>Percentual:</b> %{percent:.2f}%"
+        hovertemplate="<b>Status:</b> %{label}"
     )
     st.plotly_chart(fig)
 
@@ -516,7 +520,7 @@ if __name__ == "__main__":
             df_rel_1507_Banda_Geral_Tipo_OS = REL_1507_Banda_Geral_Tipo_OS()
             anos_distintos = sorted(df_rel_1507_Banda_Geral_Tipo_OS['ANO'].unique(), reverse=True)
             # Filtra os anos, mantendo apenas os iguais ou superiores a 2022
-            anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2022]
+            anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2024]
             anos_distintos = anos_distintos[:6]
             
             
@@ -664,8 +668,6 @@ if __name__ == "__main__":
         
         # Criar uma nova linha abaixo dos indicadores para o botão de download
         st.write("---")  # Linha separadora
-        
-        
         
         
         #data frame analitico:
