@@ -454,10 +454,13 @@ if __name__ == "__main__":
         
             # Obtendo a lista de meses distintos para o ano selecionado
             meses_distintos = sorted(df_filtered_ano['MES'].unique())
-        
+            
+            # Obtendo a lista de meses por extenso
+            meses_textos_distintos = sorted(df_filtered_ano['MES_TEXTO'].unique())
+            print(f'meses_textos_distintos:\n{meses_textos_distintos}')
             # Inicializa o mês selecionado, usando o primeiro mês disponível
             if 'mes_selecionado' not in st.session_state:
-                st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
+                 st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
             
             # Criando os botões para selecionar o mês
             if meses_distintos:
@@ -469,6 +472,7 @@ if __name__ == "__main__":
                     st.session_state['mes_selecionado'] = None
                  else:
                      try:
+                         # Use a lista de meses por extenso para encontrar o mes selecionado
                          mes_selecionado_os_mes = meses_distintos[meses_nomes.index(st.session_state['mes_selecionado']) - 1]
                          st.session_state['mes_selecionado'] = mes_selecionado_os_mes
                      except ValueError:
@@ -515,12 +519,10 @@ if __name__ == "__main__":
         #Status label:
         colStatus , colTipo = st.columns(2)
         with colStatus:
-            st.write('### Status')
+            st.write('### Status:')
         with colTipo:
-            st.write('### Tipo')
-        
-        st.write("---")  # Linha separadora
-        
+            st.write('### Tipos:')
+                
         col10 , col20 , col30 , col40 , col50 , col60 , col70 , col80 = st.columns(8)
         #Tipos de OS:
         with col10:
@@ -550,6 +552,8 @@ if __name__ == "__main__":
         
         #TODO: inserir grafico de pizza
         
+        
+        st.write("---")  # Linha separadora
         st.subheader("Geral por tipo de O.S.:")
         st.dataframe(df_rel_1507_Banda_Geral_Tipo_OS,hide_index=True, use_container_width=True)
         
