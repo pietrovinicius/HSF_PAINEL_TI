@@ -46,7 +46,6 @@ def encontrar_diretorio_instantclient(
         st.error(f"A pasta '{nome_pasta}' não foi encontrada na raiz do aplicativo.")
         return None
 
-
 @st.cache_data
 def REL_1507_Banda_Geral_Tipo_OS():
     try:
@@ -174,13 +173,61 @@ def REL_1507_Banda_Setor():
         st.error(f"Erro Inesperado: {erro}. {obter_timestamp_atual()}")
         return pd.DataFrame()
 
+def calcular_indicadores(df):
+    """Calcula os indicadores de SLA, extrai status e tipos distintos."""
+    print(f'\n*****Calcula os indicadores de SLA, extrai status e tipos distintos')
+    if df.empty:
+        return {
+            "total_ordens": 0,
+            "total_ordens_Encerrada": 0,
+            "total_ordens_Processo": 0,
+            "status_distintos": [],
+            "tipos_distintos": []
+        }
+
+    total_ordens = len(df)
+    total_ordens_Encerrada = len(df[df['STATUS'] == 'Encerrada'])
+    total_ordens_Processo = len(df[df['STATUS'] == 'Processo'])
+    
+    # Extraindo distintos
+    status_distintos = df['STATUS'].unique().tolist()
+    print(f"Status Distintos: {status_distintos}")
+    
+    tipos_distintos = df['TIPO'].unique().tolist()
+    print(f'Tipos Distintos: {tipos_distintos}')
+
+    # Contagem de ordens por tipo
+    contagem_por_tipo = df['TIPO'].value_counts().to_dict()
+    print(f'contagem_por_tipo: {contagem_por_tipo}')
+    
+    # Desestruturando a contagem por tipo em variáveis
+    Corretiva = contagem_por_tipo.get('Corretiva', 0)
+    Ronda_Inspecao = contagem_por_tipo.get('Ronda/Inspeção', 0)
+    Cadastro = contagem_por_tipo.get('Cadastro', 0)
+    Suporte = contagem_por_tipo.get('Suporte', 0)
+    print(f'Corretiva: {Corretiva}')
+    print(f'Ronda_Inspecao: {Ronda_Inspecao}')
+    print(f'Cadastro: {Cadastro}')
+    print(f'Suporte: {Suporte}')
+
+
+    return {
+        "total_ordens": total_ordens,
+        "total_ordens_Encerrada": total_ordens_Encerrada,
+        "total_ordens_Processo": total_ordens_Processo,
+        "tipos_distintos": tipos_distintos,
+        "contagem_por_tipo": contagem_por_tipo,
+        "Corretiva": Corretiva,
+        "Ronda_Inspecao": Ronda_Inspecao,
+        "Cadastro": Cadastro,
+        "Suporte": Suporte
+    }
 
 def formatar_horas(horas):
     """Formata as horas para o formato 'X horas Y minutos'."""
     horas_int = int(horas)
     minutos = int((horas - horas_int) * 60)
     return f"{horas_int} hora(s) {minutos:02} minuto(s)"
-
 
 def calcular_homem_hora(df):
     """Calcula o indicador Homem x Hora."""
@@ -191,7 +238,6 @@ def calcular_homem_hora(df):
     num_analistas = 8  # Número de analistas (fixo)
     homem_hora = (total_minutos / num_analistas) / 60 if num_analistas > 0 else 0
     return homem_hora
-
 
 def formatar_horas_df(df):
     """Formata a coluna 'HORAS' de um DataFrame para 'X horas Y minutos'."""
@@ -432,7 +478,7 @@ if __name__ == "__main__":
 
         st.write("---")
         st.write('## Banda Geral Tipo O.S.:')
-
+        
         #Geracao de Data Frame:
         df_rel_1507_Banda_Geral_Tipo_OS = REL_1507_Banda_Geral_Tipo_OS()
         
@@ -450,6 +496,48 @@ if __name__ == "__main__":
         #tratamento de valores com casa decimal:
         df_rel_1507_Banda_Geral_Tipo_OS['ANO'] = df_rel_1507_Banda_Geral_Tipo_OS['ANO'].apply(lambda x: "{:.0f}".format(x))
         #df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'] = df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
+        
+        #TODO: adicionar cartoes de indicadores:
+        
+        # Calculo de Indicadores
+        indicadores_calc = calcular_indicadores(df_rel_1507_Banda_Geral_Tipo_OS)
+        print('\n===============================================\n')
+        print(f'indicadores_calc: \n{indicadores_calc}')
+        print('\n===============================================\n')
+        
+        st.metric("Total de Ordens de Serviço", value=indicadores_calc["total_ordens"])
+        print(f'Total de Ordens: {indicadores_calc["total_ordens"]}')
+        
+        colStatus , colTipo = st.columns(2)
+        with colStatus:
+            st.write('### Status')
+        with colTipo:
+            st.write('### Tipo')
+        
+        col10 , col20 , col30 , col40 , col50 , col60 , col70 , col80 = st.columns(8)
+        with col10:
+            st.metric("Encerradas", value=indicadores_calc["total_ordens_Encerrada"])
+            print(f'Encerradas: {indicadores_calc["total_ordens_Encerrada"]}')
+        with col20:
+            st.metric(f'Processo', value=indicadores_calc["total_ordens_Processo"])
+            print(f'Processo: {indicadores_calc["total_ordens_Processo"]}')
+        with col30:
+            st.write("")
+        with col40:
+            st.write("")
+        with col50:
+            st.metric("Cadastro", value=indicadores_calc["Cadastro"])
+            print(f'col4 Cadastro: {indicadores_calc["Cadastro"]}')
+        with col60:
+            st.metric("Corretiva", value=indicadores_calc["Corretiva"])
+            print(f'col5 Corretiva: {indicadores_calc["Corretiva"]}')
+        with col70:
+            st.metric("Ronda / Inspeção", value=indicadores_calc["Ronda_Inspecao"])
+            print(f'col6 Ronda_Inspecao: {indicadores_calc["Ronda_Inspecao"]}')
+        with col80:
+            st.metric("Suporte", value=indicadores_calc["Suporte"])
+            print(f'col7 Suporte: {indicadores_calc["Suporte"]}')
+        
         
         #TODO: inserir grafico de pizza
         
@@ -508,4 +596,4 @@ if __name__ == "__main__":
         st.write("---")  # Linha separadora
         
     except Exception as err: 
-        print(f"Inexperado {err=}, {type(err)=}")
+        print(f"Inexperado:\n {err=}, {type(err)=}")
