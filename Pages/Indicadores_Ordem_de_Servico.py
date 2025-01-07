@@ -310,6 +310,106 @@ def calcular_indicadores(df):
         "minutos_restantes": minutos_restantes
     }
 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+#TODO: calcular_indicadores por analista
+def calcular_indicadores_por_analista(df):
+    print(f"\n=====calcular_indicadores_por_analista")
+    
+    #Colunas:
+    #Index(['ORDEM_SERVICO', 'ANO', 'MES', 'MES_TEXTO', 'TIPO', 'STATUS',
+    #    'DS_PRIORIDADE', 'ANALISTA', 'MINUTOS_TOTAL', 'GRUPO_PLANEJAMENTO'],
+    #    dtype='object')
+    
+    if df.empty:
+       return {
+           "total_atividades": 0
+       }
+    total_atividades = len(df)
+    print(f"total_atividades: {total_atividades}")
+    
+    # Extraindo distintos
+    status_distintos = df['STATUS'].unique().tolist()
+    print(f"Status Distintos: {status_distintos}")
+    
+    tipos_distintos = df['TIPO'].unique().tolist()
+    print(f'Tipos Distintos: {tipos_distintos}')
+
+    # Contagem de ordens por tipo
+    contagem_por_tipo = df['TIPO'].value_counts().to_dict()
+    print(f'contagem_por_tipo: {contagem_por_tipo}')
+    
+    # Desestruturando a contagem por tipo em variáveis
+    Corretiva = contagem_por_tipo.get('Corretiva', 0)
+    Ronda_Inspecao = contagem_por_tipo.get('Ronda/Inspeção', 0)
+    Cadastro = contagem_por_tipo.get('Cadastro', 0)
+    Suporte = contagem_por_tipo.get('Suporte', 0)
+    print(f'Corretiva: {Corretiva}')
+    print(f'Ronda_Inspecao: {Ronda_Inspecao}')
+    print(f'Cadastro: {Cadastro}')
+    print(f'Suporte: {Suporte}')
+    
+    
+    total_minutos = df['MINUTOS_TOTAL'].sum()
+    print(f"============================================================================================")
+    print(f"total_minutos: {total_minutos}")
+    total_horas = total_minutos // 60
+    minutos_restantes = total_minutos % 60
+    total_horas = str(total_horas) + 'h'
+    minutos_restantes = str(minutos_restantes) + 'm'
+    print(f"Total: {total_horas}")
+    print(f"minutos_restantes: {minutos_restantes}")
+    
+    
+    # Obtendo os valores distintos da coluna 'ANALISTA'
+    analistas_distintos = df['ANALISTA'].unique()
+
+    # Exibindo os valores distintos em console
+    print(f"Valores distintos da coluna 'ANALISTA':\n{analistas_distintos}")
+    
+    
+    print(f"============================================================================================\n")
+    return {
+        "total_atividades": total_atividades,
+        "tipos_distintos": tipos_distintos,
+        "contagem_por_tipo": contagem_por_tipo,
+        "Corretiva": Corretiva,
+        "Ronda_Inspecao": Ronda_Inspecao,
+        "Cadastro": Cadastro,
+        "Suporte": Suporte,
+        "total_horas": total_horas,
+        "minutos_restantes": minutos_restantes
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 def formatar_horas(horas):
     """Formata as horas para o formato 'X horas Y minutos'."""
@@ -454,7 +554,7 @@ if __name__ == "__main__":
             
             # Criando os botões para selecionar o mês
             if meses_distintos:
-                 #inserido botao de todos e botoes para cada mes
+                 #inserido botoes para cada mes
                  meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
                  st.session_state['mes_selecionado'] = st.selectbox("Selecione o Mês", meses_nomes)
                  
@@ -471,9 +571,6 @@ if __name__ == "__main__":
                 st.warning("Não há dados para exibir os filtros de meses.")
 ########################################################################################
 
-        st.write("---")
-        st.write('## Banda Geral Tipo O.S.:')
-        
         #Geracao de Data Frame:
         df_rel_1507_Banda_Geral_Tipo_OS = REL_1507_Banda_Geral_Tipo_OS()
         
@@ -492,10 +589,11 @@ if __name__ == "__main__":
         df_rel_1507_Banda_Geral_Tipo_OS['ANO'] = df_rel_1507_Banda_Geral_Tipo_OS['ANO'].apply(lambda x: "{:.0f}".format(x))
         #df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'] = df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
         
+        st.write("---")
+        st.write('## Ordens de Serviço:')
+        
         st.write("---")  # Linha separadora
-        
-        #TODO: adicionar cartoes de indicadores:
-        
+                
         # Calculo de Indicadores
         indicadores_calc = calcular_indicadores(df_rel_1507_Banda_Geral_Tipo_OS)
         
@@ -571,10 +669,10 @@ if __name__ == "__main__":
         st.write("---")  # Linha separadora
         
         
-        #TODO: data frame analitico:
-        st.write("---")
-        st.write('## Banda Geral Tipo O.S. Analítico:')
         
+        
+        #data frame analitico:
+                
         #Geracao de Data Frame:
         df_rel_1507_Tipo_OS_Analitico = REL_1507_Banda_Geral_TP_OS_analitico()
         
@@ -592,9 +690,69 @@ if __name__ == "__main__":
         #tratamento de valores com casa decimal:
         df_rel_1507_Tipo_OS_Analitico['ANO'] = df_rel_1507_Tipo_OS_Analitico['ANO'].apply(lambda x: "{:.0f}".format(x))
         df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
+
+        st.write("---")
+        st.write('## Atividades Analítico:')
         
         st.write("---")  # Linha separadora
-        st.subheader("Geral por tipo de O.S.:")
+        indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico)
+        
+        col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
+        with col1:
+            st.metric("Total de Atividades:", value=indicadores_calc_analitico["total_atividades"])
+        with col2:
+            st.write("")
+        with col3:
+            st.metric("Horas", value=indicadores_calc_analitico["total_horas"])
+            st.write("")
+        with col4:
+            st.metric("Minutos", value=indicadores_calc_analitico["minutos_restantes"])
+            st.write("")
+        with col5:
+            st.write("")
+        with col6:
+            st.write("")
+        with col7:
+            st.write("")
+        with col8:
+            st.write("")
+            
+        st.write("---")  # Linha separadora
+        col10 , col20 , col30 , col40 , col50 , col60 , col70 , col80 = st.columns(8)
+        #Tipos de OS:
+        with col10:
+            #st.metric("Encerradas", value=indicadores_calc["total_ordens_Encerrada"])
+            st.write("")
+        with col20:
+            #st.metric(f'Processo', value=indicadores_calc["total_ordens_Processo"])
+            st.write("")
+        with col30:
+            st.write("")
+        with col40:
+            st.write("")
+        #Tipos de OS:
+        with col50:
+            #st.metric("Cadastro", value=indicadores_calc["Cadastro"])
+            st.write("")
+        with col60:
+            #st.metric("Corretiva", value=indicadores_calc["Corretiva"])
+            st.write("")
+        with col70:
+            #st.metric("Ronda / Inspeção", value=indicadores_calc["Ronda_Inspecao"])
+            st.write("")
+        with col80:
+            #st.metric("Suporte", value=indicadores_calc["Suporte"])
+            st.write("")
+            
+                
+        
+        
+        #TODO: grafico com horas de cada analista:
+        
+        
+                        
+        st.write("---")  # Linha separadora
+        st.subheader("Atividades:")
         st.dataframe(df_rel_1507_Tipo_OS_Analitico,hide_index=True, use_container_width=True)
         
         # Disponibilizar o botão de download
