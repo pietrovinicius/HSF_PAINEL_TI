@@ -17,7 +17,7 @@ import plotly.express as px
 import io  # Para lidar com arquivos na memória
 
 #Configurando pagina para exibicao em modo WIDE:
-st.set_page_config(layout="wide",initial_sidebar_state="collapsed",page_title="Indicadores Ordem de Servico")
+st.set_page_config(layout="wide",initial_sidebar_state="expanded",page_title="Indicadores Ordem de Servico")
 
 def agora():
     agora = datetime.datetime.now()
@@ -120,6 +120,80 @@ def REL_1507_Banda_Setor():
     
     return df
 
+#TODO: add banda Geral / Tipo O.S.:
+@st.cache_data 
+def REL_1507_Banda_Geral_Tipo_OS():
+    try:
+        # Chamar a função para obter o caminho do Instant Client
+        caminho_instantclient = encontrar_diretorio_instantclient()
+
+        # Usar o caminho encontrado para inicializar o Oracle Client
+        if caminho_instantclient:
+            print(f'if caminho_instantclient:\n')
+            print(f'oracledb.init_oracle_client(lib_dir=caminho_instantclient)\n')
+            oracledb.init_oracle_client(lib_dir=caminho_instantclient)
+        else:
+            print("Erro ao localizar o Instant Client. Verifique o nome da pasta e o caminho.")
+        
+        connection = oracledb.connect( user="TASY", password="aloisk", dsn="192.168.5.9:1521/TASYPRD")
+        
+        with connection:
+            print(f'with oracledb.connect(user=un, password=pw, dsn=cs) as connection\n')
+            
+            print(f'\nconnection.current_schema: {connection.current_schema}')
+            
+            with connection.cursor() as cursor:
+                print(f'with connection.cursor() as cursor:\n')
+                
+                #####################################################################################
+                #QUERY:
+                sql = """              
+                    SELECT 
+                        5 AS ORDEM, 
+                        'HSF-GERAL-TIPO' AS LOCAL, 
+                        --LAST_DAY(TRUNC(MOSA.DT_ATIVIDADE)) AS DATA,
+                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) AS ANO,
+                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES,
+                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
+                        DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
+                        COUNT(DISTINCT ATP.NR_SEQUENCIA) AS ORDEM_SERVICO_TOTAL,
+                        SUM(MOSA.QT_MINUTO) AS MINUTOS_TOTAL, 
+                        ROUND(SUM(MOSA.QT_MINUTO) / 60) AS HORAS_TOTAL,
+                        MTOS.DS_TIPO AS TIPO
+                    FROM	MAN_ORDEM_SERVICO ATP
+                    INNER JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
+                    INNER JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
+                    INNER JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
+                    LEFT JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
+                    LEFT JOIN MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
+                    LEFT JOIN MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
+                    --WHERE TRUNC(MOSA.DT_ATIVIDADE) BETWEEN sysdate -365 and sysdate --:DT_INICIAL AND :DT_FINAL
+                    WHERE MOSA.DT_ATIVIDADE IS NOT NULL
+                    GROUP BY  MOSA.DT_ATIVIDADE, ATP.IE_STATUS_ORDEM, MTOS.DS_TIPO
+                    ORDER BY 
+                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
+                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) DESC,
+                        MTOS.DS_TIPO ASC
+                    """
+                #####################################################################################
+                
+                #Executando a query:
+                #print(f'cursor.execute(sql)\n{sql}')
+                cursor.execute(sql)
+                results = cursor.fetchall()
+                df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])
+                
+                # Visualizar os primeiros 5 registros
+                print(f'data_frame:\n{df.head(5)}')
+                
+                print("DataFrame gerado com sucesso!")
+
+    except Exception as erro:
+        print(f"Erro Inexperado:\n{erro}")
+    
+    return df
+
+
 # Função para transformar DataFrame em Excel e disponibilizar o download
 def download_dataframe_as_excel(df, filename="dados.xlsx"):
     """
@@ -148,30 +222,66 @@ if __name__ == "__main__":
     try:
         st.write('# Indicadores de Ordem de Servico')
         
+        ########################################################################################
+        st.write("---")
+        st.write('## Banda Geral Tipo O.S.:')
+
         #Geracao de Data Frame:
-        df_rel_1507 = REL_1507_Banda_Setor()
+        df_rel_1507_Banda_Geral_Tipo_OS = REL_1507_Banda_Geral_Tipo_OS()
         
         #Tratamento de valores null:
-        df_rel_1507 = df_rel_1507 = df_rel_1507.fillna('-')
+        df_rel_1507_Banda_Geral_Tipo_OS = df_rel_1507_Banda_Geral_Tipo_OS = df_rel_1507_Banda_Geral_Tipo_OS.fillna('-')
         
         #tratamento de valores com casa decimal:
-        df_rel_1507['ANO'] = df_rel_1507['ANO'].apply(lambda x: "{:.0f}".format(x))
-        df_rel_1507['MINUTOS_TOTAL'] = df_rel_1507['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
+        #df_rel_1507_Banda_Geral_Tipo_OS['ANO'] = df_rel_1507_Banda_Geral_Tipo_OS['ANO'].apply(lambda x: "{:.0f}".format(x))
+        #df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'] = df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
         
-        st.dataframe(df_rel_1507,hide_index=True,use_container_width=True)
-        
-        # Criar uma nova linha abaixo dos indicadores para o botão de download
-        st.write("---")  # Linha separadora
+        st.subheader("Geral por tipo de O.S.:")
+        st.dataframe(df_rel_1507_Banda_Geral_Tipo_OS,hide_index=True, height=680, use_container_width=True)
         
         # Disponibilizar o botão de download
-        download_xlsx = download_dataframe_as_excel(df_rel_1507)
+        download_xlsx = download_dataframe_as_excel(df_rel_1507_Banda_Geral_Tipo_OS)
         st.download_button(
             label="Download em XLSX",
             data=download_xlsx,
             file_name='dados_sla.xlsx',
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-
+        
+        # Criar uma nova linha abaixo dos indicadores para o botão de download
+        st.write("---")  # Linha separadora
+        ########################################################################################
+        
+        
+        ########################################################################################
+        st.write("---")
+        st.write('## Banda setor:')
+        #Geracao de Data Frame:
+        df_rel_1507_Banda_Setor = REL_1507_Banda_Setor()
+        
+        #Tratamento de valores null:
+        df_rel_1507_Banda_Setor = df_rel_1507_Banda_Setor = df_rel_1507_Banda_Setor.fillna('-')
+        
+        #tratamento de valores com casa decimal:
+        df_rel_1507_Banda_Setor['ANO'] = df_rel_1507_Banda_Setor['ANO'].apply(lambda x: "{:.0f}".format(x))
+        df_rel_1507_Banda_Setor['MINUTOS_TOTAL'] = df_rel_1507_Banda_Setor['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
+        
+        st.subheader("Horas Gastas por Setor:")
+        st.dataframe(df_rel_1507_Banda_Setor,hide_index=True, height=680, use_container_width=True)
+        
+        # Disponibilizar o botão de download
+        download_xlsx = download_dataframe_as_excel(df_rel_1507_Banda_Setor)
+        st.download_button(
+            label="Download em XLSX",
+            data=download_xlsx,
+            file_name='dados_sla.xlsx',
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        
+        # Criar uma nova linha abaixo dos indicadores para o botão de download
+        st.write("---")  # Linha separadora
+        ########################################################################################
+        
         # Criar uma nova linha abaixo dos indicadores para o botão de download
         st.write("---")  # Linha separadora
         

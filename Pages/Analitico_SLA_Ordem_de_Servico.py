@@ -16,8 +16,7 @@ import plotly.colors as pc
 import random
 
 # Configuração da página Streamlit
-st.set_page_config(layout="wide", initial_sidebar_state="expanded",
-                   page_title="Analítico SLA - Ordem de Serviço")
+st.set_page_config(layout="wide", initial_sidebar_state="expanded", page_title="Analítico SLA - Ordem de Serviço")
 
 # Aumentando exibição do DataFrame no Streamlit
 pd.set_option("styler.render.max_elements", 1249090)
@@ -139,8 +138,6 @@ def obter_dados_relatorio_1618():
         st.error(f"Erro Inesperado: {erro}. {obter_timestamp_atual()}")
         return pd.DataFrame()  # Retorna um DataFrame vazio em caso de erro
     
-
-
 def sla_cor_status(val):
     """Aplica estilos de cor com base no status SLA."""
     if val == 'Excedido':
@@ -151,7 +148,6 @@ def sla_cor_status(val):
         return 'background-color: sandybrown; color: black ; font-weight: bold;'
     else:
         return ''
-
 
 def calcular_indicadores(df):
     """Calcula os indicadores de SLA."""
@@ -175,9 +171,7 @@ def calcular_indicadores(df):
     df['TEMPO_TOTAL'] = df['TEMPO_TOTAL'].astype(int)
     media_tempo_total = df['TEMPO_TOTAL'].mean()
     media_tempo_por_prioridade = df.groupby('DS_PRIORIDADE')['TEMPO_TOTAL'].mean().reset_index()
-
     media_tempo_total_em_horas = media_tempo_total / 60 if media_tempo_total > 0 else 0
-
 
     return {
         "total_ordens": total_ordens,
@@ -605,7 +599,7 @@ if __name__ == "__main__":
                                 'HORAS_FORMATADA': 'Horas'
                             }
             )
-            st.dataframe(horas_por_setor, hide_index=True)
+            st.dataframe(horas_por_setor, hide_index=True, use_container_width=True)
         else:
             st.warning("Não há dados para exibir as horas por setor.")  
     with col11:  
@@ -621,7 +615,7 @@ if __name__ == "__main__":
                             'HORAS_FORMATADA': 'Horas'
                         }
             )
-            st.dataframe(horas_por_analista, hide_index=True)
+            st.dataframe(horas_por_analista, hide_index=True, use_container_width=True)
             print(f"DF horas_por_analista: \n{horas_por_analista.head(5)}")
         else:
             st.warning("Não há dados para exibir as horas por analista.")
@@ -676,7 +670,7 @@ if __name__ == "__main__":
     df_styled = df_filtered_mes.style.applymap(sla_cor_status, subset=['SLA'])
 
     # Exibindo o dataframe:
-    st.dataframe(df_styled, hide_index=True, use_container_width=True)
+    st.dataframe(df_styled, hide_index=True, height=680, use_container_width=True)
 
     # Disponibilizar o botão de download
     download_xlsx = preparar_download_excel(df_filtered_mes)
