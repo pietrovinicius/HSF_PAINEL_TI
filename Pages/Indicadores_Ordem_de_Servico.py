@@ -62,7 +62,8 @@ def REL_1507_Banda_Geral_Tipo_OS():
         connection = oracledb.connect(user="TASY", password="aloisk", dsn="192.168.5.9:1521/TASYPRD")
         
         with connection.cursor() as cursor:
-            sql = """              
+            sql = """
+                             
                     SELECT 
                         5 AS ORDEM, 
                         'HSF-GERAL-TIPO' AS LOCAL, 
@@ -497,6 +498,8 @@ if __name__ == "__main__":
         df_rel_1507_Banda_Geral_Tipo_OS['ANO'] = df_rel_1507_Banda_Geral_Tipo_OS['ANO'].apply(lambda x: "{:.0f}".format(x))
         #df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'] = df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
         
+        st.write("---")  # Linha separadora
+        
         #TODO: adicionar cartoes de indicadores:
         
         # Calculo de Indicadores
@@ -508,13 +511,18 @@ if __name__ == "__main__":
         st.metric("Total de Ordens de Serviço", value=indicadores_calc["total_ordens"])
         print(f'Total de Ordens: {indicadores_calc["total_ordens"]}')
         
+        st.write("---")  # Linha separadora
+        #Status label:
         colStatus , colTipo = st.columns(2)
         with colStatus:
             st.write('### Status')
         with colTipo:
             st.write('### Tipo')
         
+        st.write("---")  # Linha separadora
+        
         col10 , col20 , col30 , col40 , col50 , col60 , col70 , col80 = st.columns(8)
+        #Tipos de OS:
         with col10:
             st.metric("Encerradas", value=indicadores_calc["total_ordens_Encerrada"])
             print(f'Encerradas: {indicadores_calc["total_ordens_Encerrada"]}')
@@ -525,6 +533,7 @@ if __name__ == "__main__":
             st.write("")
         with col40:
             st.write("")
+        #Tipos de OS:
         with col50:
             st.metric("Cadastro", value=indicadores_calc["Cadastro"])
             print(f'col4 Cadastro: {indicadores_calc["Cadastro"]}')
@@ -553,45 +562,6 @@ if __name__ == "__main__":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
         
-        # Criar uma nova linha abaixo dos indicadores para o botão de download
-        st.write("---")  # Linha separadora
-        ########################################################################################
-        
-        
-        ########################################################################################
-        """
-        st.write("---")
-        st.write('## Banda setor:')
-        #Geracao de Data Frame:
-        df_rel_1507_Banda_Setor = REL_1507_Banda_Setor()
-        
-        #Tratamento de valores null:
-        df_rel_1507_Banda_Setor = df_rel_1507_Banda_Setor = df_rel_1507_Banda_Setor.fillna('-')
-        
-        # Filtrando o data frame pelo ano selecionado
-        if st.session_state['ano_selecionado'] is not None:
-            df_rel_1507_Banda_Setor = df_rel_1507_Banda_Setor[df_rel_1507_Banda_Setor['ANO'] == st.session_state['ano_selecionado']]
-        
-        # Filtrando o data frame pelo mes selecionado
-        if st.session_state['mes_selecionado'] is not None:
-            df_rel_1507_Banda_Setor = df_rel_1507_Banda_Setor[df_rel_1507_Banda_Setor['MES'] == st.session_state['mes_selecionado']]
-        
-        st.subheader("Horas Gastas por Setor:")
-        st.dataframe(df_rel_1507_Banda_Setor,hide_index=True,use_container_width=True)
-        
-        # Disponibilizar o botão de download
-        download_xlsx = preparar_download_excel(df_rel_1507_Banda_Setor)
-        st.download_button(
-            label="Download em XLSX",
-            data=download_xlsx,
-            file_name='dados_sla.xlsx',
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-        
-        # Criar uma nova linha abaixo dos indicadores para o botão de download
-        st.write("---")  # Linha separadora
-        ########################################################################################
-        """
         # Criar uma nova linha abaixo dos indicadores para o botão de download
         st.write("---")  # Linha separadora
         
