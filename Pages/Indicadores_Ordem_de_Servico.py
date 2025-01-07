@@ -154,7 +154,7 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
                         TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
                         MTOS.DS_TIPO AS TIPO,
                         DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
-                        DECODE(ATP.IE_PRIORIDADE, 'A', 'ALTA', 'M', 'MEDIA', 'E','EMERGÊNCIA', 'FORA DA PRIORIDADE') AS DS_PRIORIDADE, 
+                        DECODE(ATP.IE_PRIORIDADE, 'A', 'Alta', 'M', 'Média', 'E','Emergência', 'Fora da Prioridade') AS DS_PRIORIDADE, 
                         ABREVIA_NOME( INITCAP(OBTER_NOME_USUARIO(MOSA.NM_USUARIO_EXEC)),'A') AS ANALISTA,
                         MOSA.QT_MINUTO AS MINUTOS_TOTAL,
                         MGP.DS_GRUPO_PLANEJ AS GRUPO_PLANEJAMENTO
@@ -651,6 +651,8 @@ if __name__ == "__main__":
             exibir_grafico_pizza(df_rel_1507_Banda_Geral_Tipo_OS)
         with colBarras:
             exibir_grafico_barras_tipo_os(indicadores_calc)
+            
+        
         
         #DATA FRAME df_rel_1507_Banda_Geral_Tipo_OS:
         #st.write("---")  # Linha separadora
@@ -693,6 +695,12 @@ if __name__ == "__main__":
         st.write("---")
         st.write('## Atividades por Analistas:')
         
+        #TODO:
+        #Adicionar gráfico de prioridades
+        
+        #TODO:
+        #Adicionar grupo de planejamento
+        
         st.write("---")  # Linha separadora
         indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
         # Exibir os cartões dos analistas:
@@ -720,6 +728,7 @@ if __name__ == "__main__":
         st.write("---")  # Linha separadora 
         
         #TODO: grafico com horas de cada analista:
+        
         
         st.write("---")  # Linha separadora
         st.subheader("Atividades:")
