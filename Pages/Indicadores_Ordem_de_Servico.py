@@ -27,6 +27,28 @@ def obter_timestamp_atual():
     """Retorna o timestamp atual no formato YYYY-MM-DD HH-MM-SS."""
     return datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
 
+def formatar_horas_df(df):
+    """Formata a coluna 'HORAS' de um DataFrame para 'X horas Y minutos'."""
+    if df.empty:
+      return df
+    
+    def formatar_horas_individual(horas):
+        horas_int = int(horas)
+        minutos = int((horas - horas_int) * 60)
+        return f"{horas_int} hora(s) {minutos:02} minuto(s)"
+
+    df['HORAS_FORMATADA'] = df['HORAS_TOTAL'].apply(formatar_horas_individual)
+    df = df.drop('HORAS_TOTAL', axis=1)
+    return df
+
+def preparar_download_excel(df, filename="dados.xlsx"):
+    """Converte um DataFrame em um arquivo Excel na memória para download."""
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Sheet1', index=False)
+    return output.getvalue()
+
+
 
 def encontrar_diretorio_instantclient(
         nome_pasta="instantclient-basiclite-windows.x64-23.6.0.24.10\\instantclient_23_6"):
@@ -71,6 +93,7 @@ def REL_1507_Banda_Geral_Tipo_OS():
                         EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES,
                         TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
                         DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
+                        MTOS.DS_TIPO AS TIPO,
                         COUNT(DISTINCT ATP.NR_SEQUENCIA) AS ORDEM_SERVICO_TOTAL,
                         SUM(MOSA.QT_MINUTO) AS MINUTOS_TOTAL, 
                         ROUND(SUM(MOSA.QT_MINUTO) / 60) AS HORAS_TOTAL,
@@ -78,7 +101,6 @@ def REL_1507_Banda_Geral_Tipo_OS():
                         RPAD(MOD(ROUND(SUM(MOSA.QT_MINUTO) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 60), 2, '0') AS MINUTOS_HOMEM,
                         LPAD(FLOOR((SUM(MOSA.QT_MINUTO) / 60) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 2, '0') || ' horas e ' ||
                         RPAD(MOD(ROUND(SUM(MOSA.QT_MINUTO) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 60), 2, '0') || ' minutos' AS HORAS_MINUTOS_HOMEM,
-                        MTOS.DS_TIPO AS TIPO,
                         MGP.DS_GRUPO_PLANEJ AS GRUPO_PLANEJAMENTO
                     FROM	MAN_ORDEM_SERVICO ATP
                     INNER JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
@@ -94,6 +116,62 @@ def REL_1507_Banda_Geral_Tipo_OS():
                         EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
                         EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) DESC,
                         MTOS.DS_TIPO ASC
+                    """
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])
+            st.success("Gerado as: " + obter_timestamp_atual())
+            return df
+    except oracledb.Error as e:
+        st.error(f"Erro no Oracle: {e}. {obter_timestamp_atual()}")
+        return pd.DataFrame()  # Retorna um DataFrame vazio em caso de erro
+    except Exception as erro:
+        st.error(f"Erro Inesperado: {erro}. {obter_timestamp_atual()}")
+        return pd.DataFrame()  # Retorna um DataFrame vazio em caso de erro
+
+@st.cache_data
+def REL_1507_Banda_Geral_TP_OS_analitico():
+    try:
+        # Chamar a função para obter o caminho do Instant Client
+        caminho_instantclient = encontrar_diretorio_instantclient()
+
+        # Usar o caminho encontrado para inicializar o Oracle Client
+        if caminho_instantclient:
+            oracledb.init_oracle_client(lib_dir=caminho_instantclient)
+        else:
+            st.error("Erro ao localizar o Instant Client. Verifique o nome da pasta e o caminho.")
+            return pd.DataFrame()
+        
+        connection = oracledb.connect(user="TASY", password="aloisk", dsn="192.168.5.9:1521/TASYPRD")
+        
+        with connection.cursor() as cursor:
+            sql = """
+                    --banda Geral Tipo O.S. ANALITICO:
+                    SELECT 
+                        ATP.NR_SEQUENCIA AS ORDEM_SERVICO,
+                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) AS ANO,
+                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES,
+                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
+                        MTOS.DS_TIPO AS TIPO,
+                        DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
+                        DECODE(ATP.IE_PRIORIDADE, 'A', 'ALTA', 'M', 'MEDIA', 'E','EMERGÊNCIA', 'FORA DA PRIORIDADE') AS DS_PRIORIDADE, 
+                        ABREVIA_NOME( INITCAP(OBTER_NOME_USUARIO(MOSA.NM_USUARIO_EXEC)),'A') AS ANALISTA,
+                        MOSA.QT_MINUTO AS MINUTOS_TOTAL,
+                        MGP.DS_GRUPO_PLANEJ AS GRUPO_PLANEJAMENTO
+                    FROM	MAN_ORDEM_SERVICO ATP
+                    INNER JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
+                    INNER JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
+                    INNER JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
+                    INNER JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
+                    INNER JOIN MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
+                    INNER JOIN MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
+                    WHERE MOSA.DT_ATIVIDADE IS NOT NULL
+                    AND MGP.NR_SEQUENCIA = 22 
+                    ORDER BY 
+                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
+                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) DESC,
+                        MTOS.DS_TIPO , MTOS.DS_TIPO
+
                     """
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -179,11 +257,7 @@ def calcular_indicadores(df):
     print(f'\n*****Calcula os indicadores de SLA, extrai status e tipos distintos')
     if df.empty:
         return {
-            "total_ordens": 0,
-            "total_ordens_Encerrada": 0,
-            "total_ordens_Processo": 0,
-            "status_distintos": [],
-            "tipos_distintos": []
+            "total_ordens": 0
         }
 
     total_ordens = len(df)
@@ -211,7 +285,17 @@ def calcular_indicadores(df):
     print(f'Cadastro: {Cadastro}')
     print(f'Suporte: {Suporte}')
 
-
+    total_minutos = df['MINUTOS_TOTAL'].sum()
+    print(f"============================================================================================")
+    print(f"total_minutos: {total_minutos}")
+    total_horas = total_minutos // 60
+    minutos_restantes = total_minutos % 60
+    total_horas = str(total_horas) + 'h'
+    minutos_restantes = str(minutos_restantes) + 'm'
+    print(f"Total: {total_horas}")
+    print(f"minutos_restantes: {minutos_restantes}")
+    
+    print(f"============================================================================================\n")
     return {
         "total_ordens": total_ordens,
         "total_ordens_Encerrada": total_ordens_Encerrada,
@@ -221,8 +305,11 @@ def calcular_indicadores(df):
         "Corretiva": Corretiva,
         "Ronda_Inspecao": Ronda_Inspecao,
         "Cadastro": Cadastro,
-        "Suporte": Suporte
+        "Suporte": Suporte,
+        "total_horas": total_horas,
+        "minutos_restantes": minutos_restantes
     }
+
 
 def formatar_horas(horas):
     """Formata as horas para o formato 'X horas Y minutos'."""
@@ -240,181 +327,84 @@ def calcular_homem_hora(df):
     homem_hora = (total_minutos / num_analistas) / 60 if num_analistas > 0 else 0
     return homem_hora
 
-def formatar_horas_df(df):
-    """Formata a coluna 'HORAS' de um DataFrame para 'X horas Y minutos'."""
+def exibir_grafico_pizza(df):
+    """Exibe o gráfico de pizza da distribuição de status."""
     if df.empty:
-      return df
-    
-    def formatar_horas_individual(horas):
-        horas_int = int(horas)
-        minutos = int((horas - horas_int) * 60)
-        return f"{horas_int} hora(s) {minutos:02} minuto(s)"
-
-    df['HORAS_FORMATADA'] = df['HORAS_TOTAL'].apply(formatar_horas_individual)
-    df = df.drop('HORAS_TOTAL', axis=1)
-    return df
-
-def preparar_download_excel(df, filename="dados.xlsx"):
-    """Converte um DataFrame em um arquivo Excel na memória para download."""
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, sheet_name='Sheet1', index=False)
-    return output.getvalue()
-
-def exibir_grafico_barras_tempo_prioridade(indicadores_calc):
-    """Exibe o gráfico de barras do tempo médio por prioridade."""
-    if indicadores_calc["media_tempo_por_prioridade"].empty:
-        st.warning("Não há dados para exibir o gráfico de barras de tempo por prioridade.")
+        st.warning("Não há dados para exibir o gráfico de pizza.")
         return
-    
-    # Definir o mapa de cores
-    color_map = {
-        'Alta': 'red',
-        'Média': 'orange',
-        'Fora da Prioridade': 'gray',
-        'Emergência': 'purple'
-    }
-    
-    fig = px.bar(indicadores_calc["media_tempo_por_prioridade"], 
-                 x='DS_PRIORIDADE', 
-                 y='TEMPO_TOTAL',
-                 title='Tempo Médio por Prioridade',
-                 color='DS_PRIORIDADE',  # Usar DS_PRIORIDADE para aplicar as cores
-                 color_discrete_map=color_map,
-                 text_auto=False,
-                 text = 'Tempo_Formatado'
-                )
-    
-    fig.update_layout(
-        legend_title_text=" ",
-         margin=dict(l=20, r=20, t=60, b=20),
-         #template="plotly_dark", # Paletas de cores que o plotly oferece, pode usar: "plotly_dark" ou "plotly"
-        title_font=dict(size=17),
-    )
-    
-    fig.update_xaxes(title_text='Prioridade')  # Alterar o rótulo do eixo x
-    fig.update_yaxes(title_text='Tempo Total (Min)') # Alterar o rótulo do eixo y
-    fig.update_traces(
-        textposition='outside',  
-        textfont_family="Arial", 
-        textfont_size=13,
-        hovertemplate="<b>Prioridade:</b> %{x}<br><b>Tempo Total:</b> %{text}" # Personalizando o hovertemplate
-     )
-    st.plotly_chart(fig)
-    
-def exibir_tipos_os(df):
-    """
-      Exibe um gráfico de barras da distribuição de tipos de O.S.
-    Args:
-        df (pd.DataFrame): DataFrame contendo os dados.
-    """
-    if df.empty:
-       st.warning("Não há dados para exibir o gráfico de tipos de O.S")
-       return
-    tipos_os = df['DESCRICAO'].str.lower().copy()
-    
-    def categorizar_tipo_os(texto):
-      if texto is None:
-        return 'Outros'
-      if 'corretiva' in texto:
-          return 'Corretiva'
-      elif 'preventiva' in texto:
-          return 'Preventiva'
-      elif 'desenvolvimento' in texto:
-          return 'Desenvolvimento'
-      elif 'projeto' in texto:
-          return 'Projetos'
-      else:
-          return 'Outros'
-    
-    df['TIPO_OS'] = tipos_os.apply(categorizar_tipo_os)
 
-    tipos_contagem = df['TIPO_OS'].value_counts().reset_index()
-    tipos_contagem.columns = ['TIPO_OS', 'QUANTIDADE']
-    
+    # Contagem de ordens por status
+    status_counts = df['STATUS'].value_counts().reset_index()
+    status_counts.columns = ['STATUS', 'count']
+    print(f"Status counts:\n{status_counts}")
+
+    # Mapeamento de cores
+    color_map = {
+        'Aberta': 'skyblue',
+        'Processo': 'orange',
+        'Encerrada': 'lightgreen'
+    }
+
+    # Criando o gráfico de pizza com Plotly
+    fig = px.pie(status_counts,
+                 names='STATUS',
+                 values='count',
+                 title="Distribuição de Ordens por Status",
+                 color='STATUS',
+                 color_discrete_map=color_map)
+    fig.update_traces(
+         hovertemplate="<b>Status:</b> %{label}<br><b>Percentual:</b> %{percent:.2f}%"
+    )
+    st.plotly_chart(fig)
+
+def exibir_grafico_barras_tipo_os(indicadores_calc):
+    """Exibe o gráfico de barras da contagem de ordens de serviço por tipo."""
+
+    # Extraindo dados do dicionário de indicadores
+    tipos_os = ['Corretiva', 'Ronda_Inspecao', 'Cadastro', 'Suporte']
+    contagens = [indicadores_calc.get(tipo, 0) for tipo in tipos_os]
+
+    # Criando um DataFrame para o Plotly Express
+    df_tipos = pd.DataFrame({'Tipo': tipos_os, 'Contagem': contagens})
+
+    # Mapeamento de cores (opcional, se quiser cores customizadas)
     color_map = {
         'Corretiva': 'skyblue',
-        'Preventiva': 'lightgreen',
-        'Desenvolvimento': 'orange',
-        'Projetos': 'lightcoral',
-        'Outros': 'gray'
+        'Ronda_Inspecao': 'orange',
+        'Cadastro': 'lightgreen',
+        'Suporte': 'lightcoral'
     }
-    
-    fig = px.bar(tipos_contagem, 
-                 x='TIPO_OS', 
-                 y='QUANTIDADE', 
-                 title='Distribuição de Tipos de O.S',
-                 color='TIPO_OS',
-                 color_discrete_map = color_map,
-                 text_auto=True
-                )
-                
-    fig.update_layout(
-        legend_title_text="",
-         margin=dict(l=20, r=20, t=60, b=20),
-         #template="plotly_dark", # Paletas de cores que o plotly oferece, pode usar: "plotly_dark" ou "plotly"
-        title_font=dict(size=17),
-    )
 
-    fig.update_xaxes(title_text='')  # Remover o rótulo do eixo x
-    fig.update_yaxes(title_text='Quantidade') 
-    fig.update_traces(
-        textposition='outside',  
-        textfont_family="Arial", 
-        textfont_size=13,
-        hovertemplate="<b>Tipo:</b> %{x}<br><b>Quantidade:</b> %{y}" # Personalizando o hovertemplate
-     )
-    st.plotly_chart(fig)
+    fig = px.bar(df_tipos,
+                x='Tipo',
+                y='Contagem',
+                title='Contagem de Ordens de Serviço por Tipo',
+                color='Tipo',  # Usar Tipo para aplicar as cores
+                color_discrete_map=color_map,
+                text_auto=True #Habilitar os valores sobre as barras
+               )
 
-
-def exibir_principais_setores(df, top_n=10):
-    """
-        Exibe os principais setores que abriram mais O.S. em um gráfico de barras.
-        Args:
-            df (pd.DataFrame): DataFrame contendo os dados.
-            top_n (int): Número de setores a serem exibidos.
-    """
-    if df.empty:
-        st.warning("Não há dados para exibir o gráfico de setores.")
-        return
-
-    setores_contagem = df['LOCAL'].value_counts().nlargest(top_n).reset_index()
-    setores_contagem.columns = ['SETOR_ATENDIMENTO', 'QUANTIDADE']
-
-    num_setores = len(setores_contagem)
-    
-    # Gerar cores aleatórias, agora em loop, para garantir que sempre terá uma cor para cada item.
-    color_scale = pc.qualitative.Set1  # Selecione a paleta de cores que preferir
-    color_list = []
-    for i in range(num_setores):
-        color_list.append(color_scale[i % len(color_scale)])
-
-
-    color_map = dict(zip(setores_contagem['SETOR_ATENDIMENTO'], color_list))
-    
-    fig = px.bar(setores_contagem, 
-                 x='SETOR_ATENDIMENTO', 
-                 y='QUANTIDADE', 
-                 title=f'Top {top_n} Setores com Mais O.S',
-                 color = 'SETOR_ATENDIMENTO',
-                 color_discrete_map = color_map,
-                 text_auto=True
-                )
-        
     fig.update_layout(
         legend_title_text=" ",
-         margin=dict(l=20, r=20, t=60, b=20),
-         #template="plotly_dark", # Paletas de cores que o plotly oferece, pode usar: "plotly_dark" ou "plotly"
+        margin=dict(l=20, r=20, t=60, b=20),
         title_font=dict(size=17),
     )
-    fig.update_xaxes(title_text='')  # Remover o rótulo do eixo x
-    fig.update_yaxes(title_text='')  # Remover o rótulo do eixo y
-    
+
+    fig.update_xaxes(title_text='')  # Alterar o rótulo do eixo x
+    fig.update_yaxes(title_text='Número de Ordens')  # Alterar o rótulo do eixo y
     fig.update_traces(
-      hovertemplate="<b>Setor:</b> %{x}<br><b>Quantidade:</b> %{y}"  # Personalizando o hovertemplate
+        textposition='outside',
+        textfont_family="Arial",
+        textfont_size=13,
+        hovertemplate="<b>Tipo:</b> %{x}<br><b>Total:</b> %{y}"  # Personalizando o hovertemplate
     )
-    
+
     st.plotly_chart(fig)
+
+
+
+
+
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
 if __name__ == "__main__":
@@ -508,12 +498,25 @@ if __name__ == "__main__":
         
         # Calculo de Indicadores
         indicadores_calc = calcular_indicadores(df_rel_1507_Banda_Geral_Tipo_OS)
-        print('\n===============================================\n')
-        print(f'indicadores_calc: \n{indicadores_calc}')
-        print('\n===============================================\n')
         
-        st.metric("Total de Ordens de Serviço", value=indicadores_calc["total_ordens"])
-        print(f'Total de Ordens: {indicadores_calc["total_ordens"]}')
+        col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
+        with col1:
+            st.metric("Total de Ordens de Serviço", value=indicadores_calc["total_ordens"])
+        with col2:
+            st.write("")
+        with col3:
+            st.metric("Horas", value=indicadores_calc["total_horas"])
+        with col4:
+            st.metric("Minutos", value=indicadores_calc["minutos_restantes"])
+        with col5:
+            st.write("")
+        with col6:
+            st.write("")
+        with col7:
+            st.write("")
+        with col8:
+            st.write("")
+        
         
         st.write("---")  # Linha separadora
         #Status label:
@@ -527,10 +530,8 @@ if __name__ == "__main__":
         #Tipos de OS:
         with col10:
             st.metric("Encerradas", value=indicadores_calc["total_ordens_Encerrada"])
-            print(f'Encerradas: {indicadores_calc["total_ordens_Encerrada"]}')
         with col20:
             st.metric(f'Processo', value=indicadores_calc["total_ordens_Processo"])
-            print(f'Processo: {indicadores_calc["total_ordens_Processo"]}')
         with col30:
             st.write("")
         with col40:
@@ -538,27 +539,66 @@ if __name__ == "__main__":
         #Tipos de OS:
         with col50:
             st.metric("Cadastro", value=indicadores_calc["Cadastro"])
-            print(f'col4 Cadastro: {indicadores_calc["Cadastro"]}')
         with col60:
             st.metric("Corretiva", value=indicadores_calc["Corretiva"])
-            print(f'col5 Corretiva: {indicadores_calc["Corretiva"]}')
         with col70:
             st.metric("Ronda / Inspeção", value=indicadores_calc["Ronda_Inspecao"])
-            print(f'col6 Ronda_Inspecao: {indicadores_calc["Ronda_Inspecao"]}')
         with col80:
             st.metric("Suporte", value=indicadores_calc["Suporte"])
-            print(f'col7 Suporte: {indicadores_calc["Suporte"]}')
         
         
-        #TODO: inserir grafico de pizza
+        colPizza , colBarras = st.columns(2)
+        with colPizza:
+            exibir_grafico_pizza(df_rel_1507_Banda_Geral_Tipo_OS)
+        with colBarras:
+            exibir_grafico_barras_tipo_os(indicadores_calc)
         
+        #DATA FRAME df_rel_1507_Banda_Geral_Tipo_OS:
+        #st.write("---")  # Linha separadora
+        #st.subheader("Geral por tipo de O.S.:")
+        #st.dataframe(df_rel_1507_Banda_Geral_Tipo_OS,hide_index=True, use_container_width=True)
+        #
+        ## Disponibilizar o botão de download
+        #download_xlsx = preparar_download_excel(df_rel_1507_Banda_Geral_Tipo_OS)
+        #st.download_button(
+        #    label="Download em XLSX",
+        #    data=download_xlsx,
+        #    file_name='dados_sla.xlsx',
+        #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        #)
+        
+        # Criar uma nova linha abaixo dos indicadores para o botão de download
+        st.write("---")  # Linha separadora
+        
+        
+        #TODO: data frame analitico:
+        st.write("---")
+        st.write('## Banda Geral Tipo O.S. Analítico:')
+        
+        #Geracao de Data Frame:
+        df_rel_1507_Tipo_OS_Analitico = REL_1507_Banda_Geral_TP_OS_analitico()
+        
+        #Tratamento de valores null:
+        df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico.fillna('-')
+        
+         # Filtrando o data frame pelo ano selecionado
+        if st.session_state['ano_selecionado'] is not None:
+            df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['ANO'] == st.session_state['ano_selecionado']]
+        
+        # Filtrando o data frame pelo mes selecionado
+        if st.session_state['mes_selecionado'] is not None:
+            df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['MES'] == st.session_state['mes_selecionado']]
+        
+        #tratamento de valores com casa decimal:
+        df_rel_1507_Tipo_OS_Analitico['ANO'] = df_rel_1507_Tipo_OS_Analitico['ANO'].apply(lambda x: "{:.0f}".format(x))
+        df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
         
         st.write("---")  # Linha separadora
         st.subheader("Geral por tipo de O.S.:")
-        st.dataframe(df_rel_1507_Banda_Geral_Tipo_OS,hide_index=True, use_container_width=True)
+        st.dataframe(df_rel_1507_Tipo_OS_Analitico,hide_index=True, use_container_width=True)
         
         # Disponibilizar o botão de download
-        download_xlsx = preparar_download_excel(df_rel_1507_Banda_Geral_Tipo_OS)
+        download_xlsx = preparar_download_excel(df_rel_1507_Tipo_OS_Analitico)
         st.download_button(
             label="Download em XLSX",
             data=download_xlsx,
@@ -566,8 +606,6 @@ if __name__ == "__main__":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
         
-        # Criar uma nova linha abaixo dos indicadores para o botão de download
-        st.write("---")  # Linha separadora
         
     except Exception as err: 
         print(f"Inexperado:\n {err=}, {type(err)=}")
