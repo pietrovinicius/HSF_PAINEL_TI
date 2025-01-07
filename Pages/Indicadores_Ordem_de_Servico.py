@@ -308,23 +308,7 @@ def calcular_indicadores(df):
         "Suporte": Suporte,
         "total_horas": total_horas,
         "minutos_restantes": minutos_restantes
-    }
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    } 
     
 #TODO: calcular_indicadores por analista
 def calcular_indicadores_por_analista(df):
@@ -363,7 +347,6 @@ def calcular_indicadores_por_analista(df):
     print(f'Cadastro: {Cadastro}')
     print(f'Suporte: {Suporte}')
     
-    
     total_minutos = df['MINUTOS_TOTAL'].sum()
     print(f"============================================================================================")
     print(f"total_minutos: {total_minutos}")
@@ -371,17 +354,30 @@ def calcular_indicadores_por_analista(df):
     minutos_restantes = total_minutos % 60
     total_horas = str(total_horas) + 'h'
     minutos_restantes = str(minutos_restantes) + 'm'
-    print(f"Total: {total_horas}")
+    print(f"Total Horas: {total_horas}")
     print(f"minutos_restantes: {minutos_restantes}")
-    
-    
+
     # Obtendo os valores distintos da coluna 'ANALISTA'
     analistas_distintos = df['ANALISTA'].unique()
 
     # Exibindo os valores distintos em console
     print(f"Valores distintos da coluna 'ANALISTA':\n{analistas_distintos}")
-    
-    
+    # Agrupar por analista e somar os minutos
+    analistas_minutos = df.groupby('ANALISTA')['MINUTOS_TOTAL'].sum()
+
+    # Dicionário para armazenar as horas por analista
+    analistas_horas = {}
+
+    for analista, total_minutos in analistas_minutos.items():
+        # Converter minutos para horas e minutos
+        total_horas_analista = total_minutos // 60
+        minutos_restantes_analista = total_minutos % 60
+        horas_minutos = f"{total_horas_analista}h {minutos_restantes_analista}m"
+
+        analistas_horas[analista] = horas_minutos
+        
+    print(f"*******\nAnalistas_horas: \n{analistas_horas}\n*******")
+
     print(f"============================================================================================\n")
     return {
         "total_atividades": total_atividades,
@@ -392,25 +388,29 @@ def calcular_indicadores_por_analista(df):
         "Cadastro": Cadastro,
         "Suporte": Suporte,
         "total_horas": total_horas,
-        "minutos_restantes": minutos_restantes
+        "minutos_restantes": minutos_restantes,
+         "Analistas_horas": analistas_horas
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+def exibir_cartoes_analistas(analistas_horas):
+    """Exibe cartões com as horas de atividades de cada analista."""
 
+    if not analistas_horas:
+      st.warning("Não há dados para exibir os cartões dos analistas")
+      return
+    
+    num_colunas = 3  # Quantidade de colunas por linha
+    analistas = list(analistas_horas.items()) # Converte em lista
+    
+    for i in range(0, len(analistas), num_colunas):
+        # Criar colunas para cada linha de cartões
+        cols = st.columns(num_colunas)
+        
+        for j in range(num_colunas):
+            if i + j < len(analistas): # Garantir que nao pegue analista fora do range da lista
+                analista, horas_minutos = analistas[i + j]
+                with cols[j]: # Adicionar cartao na coluna
+                    st.metric(label=f"{analista}", value=f"{horas_minutos}")
+                    
 def formatar_horas(horas):
     """Formata as horas para o formato 'X horas Y minutos'."""
     horas_int = int(horas)
@@ -501,10 +501,7 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
 
     st.plotly_chart(fig)
 
-
-
-
-
+#=================================== MAIN #===================================
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
 if __name__ == "__main__":
@@ -692,11 +689,11 @@ if __name__ == "__main__":
         df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
 
         st.write("---")
-        st.write('## Atividades Analítico:')
+        st.write('## Atividades por Analistas:')
         
         st.write("---")  # Linha separadora
-        indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico)
-        
+        indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
+        # Exibir os cartões dos analistas:
         col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
         with col1:
             st.metric("Total de Atividades:", value=indicadores_calc_analitico["total_atividades"])
@@ -717,40 +714,11 @@ if __name__ == "__main__":
         with col8:
             st.write("")
             
-        st.write("---")  # Linha separadora
-        col10 , col20 , col30 , col40 , col50 , col60 , col70 , col80 = st.columns(8)
-        #Tipos de OS:
-        with col10:
-            #st.metric("Encerradas", value=indicadores_calc["total_ordens_Encerrada"])
-            st.write("")
-        with col20:
-            #st.metric(f'Processo', value=indicadores_calc["total_ordens_Processo"])
-            st.write("")
-        with col30:
-            st.write("")
-        with col40:
-            st.write("")
-        #Tipos de OS:
-        with col50:
-            #st.metric("Cadastro", value=indicadores_calc["Cadastro"])
-            st.write("")
-        with col60:
-            #st.metric("Corretiva", value=indicadores_calc["Corretiva"])
-            st.write("")
-        with col70:
-            #st.metric("Ronda / Inspeção", value=indicadores_calc["Ronda_Inspecao"])
-            st.write("")
-        with col80:
-            #st.metric("Suporte", value=indicadores_calc["Suporte"])
-            st.write("")
-            
-                
-        
+        exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])  
+        st.write("---")  # Linha separadora 
         
         #TODO: grafico com horas de cada analista:
         
-        
-                        
         st.write("---")  # Linha separadora
         st.subheader("Atividades:")
         st.dataframe(df_rel_1507_Tipo_OS_Analitico,hide_index=True, use_container_width=True)
@@ -763,7 +731,6 @@ if __name__ == "__main__":
             file_name='dados_sla.xlsx',
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        
         
     except Exception as err: 
         print(f"Inexperado:\n {err=}, {type(err)=}")
