@@ -151,6 +151,7 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
                         ATP.NR_SEQUENCIA AS ORDEM_SERVICO,
                         EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) AS ANO,
                         EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES,
+                        EXTRACT(DAY FROM MOSA.DT_ATIVIDADE) AS DIA,
                         TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
                         MTOS.DS_TIPO AS TIPO,
                         DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
@@ -170,6 +171,7 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
                     ORDER BY 
                         EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
                         EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) DESC,
+                        EXTRACT(DAY FROM MOSA.DT_ATIVIDADE),
                         MTOS.DS_TIPO , MTOS.DS_TIPO
 
                     """
