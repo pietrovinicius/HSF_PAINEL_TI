@@ -680,20 +680,21 @@ if __name__ == "__main__":
                     #exibir o gráfico de barras dos tipos de OS
                     exibir_grafico_barras_tipo_os(indicadores_calc)
                     
-                    
-                ##DATA FRAME df_ordens_geral:
-                #st.write("---")  # Linha separadora
-                #st.subheader("Geral por tipo de O.S.:")
-                #st.dataframe(df_ordens_geral,hide_index=True, use_container_width=True)
-                #
-                ## Disponibilizar o botão de download
-                #download_xlsx = preparar_download_excel(df_ordens_geral)
-                #st.download_button(
-                #    label="Download em XLSX",
-                #    data=download_xlsx,
-                #    file_name='dados_sla.xlsx',
-                #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                #)
+                
+                
+                #DATA FRAME df_ordens_geral:
+                st.write("---")  # Linha separadora
+                st.subheader("Geral por tipo de O.S.:")
+                st.dataframe(df_ordens_geral,hide_index=True, use_container_width=True)
+                
+                # Disponibilizar o botão de download
+                download_xlsx = preparar_download_excel(df_ordens_geral)
+                st.download_button(
+                    label="Download em XLSX",
+                    data=download_xlsx,
+                    file_name='dados_sla.xlsx',
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
                 
                 # Criar uma nova linha abaixo dos indicadores para o botão de download
                 st.write("---")  # Linha separadora
@@ -767,18 +768,18 @@ if __name__ == "__main__":
                 #TODO: grafico com horas de cada analista:
                 
                 
-                st.write("---")  # Linha separadora
-                st.subheader("Atividades:")
-                st.dataframe(df_rel_1507_Tipo_OS_Analitico,hide_index=True, use_container_width=True)
-                
-                # Disponibilizar o botão de download
-                download_xlsx = preparar_download_excel(df_rel_1507_Tipo_OS_Analitico)
-                st.download_button(
-                    label="Download em XLSX",
-                    data=download_xlsx,
-                    file_name='dados_sla.xlsx',
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+                #st.write("---")  # Linha separadora
+                #st.subheader("Atividades:")
+                #st.dataframe(df_rel_1507_Tipo_OS_Analitico,hide_index=True, use_container_width=True)
+                #
+                ## Disponibilizar o botão de download
+                #download_xlsx = preparar_download_excel(df_rel_1507_Tipo_OS_Analitico)
+                #st.download_button(
+                #    label="Download em XLSX",
+                #    data=download_xlsx,
+                #    file_name='dados_sla.xlsx',
+                #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                #)
         
         except Exception as err: 
             print(f"Inexperado:\n {err=}, {type(err)=}")
