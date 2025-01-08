@@ -23,7 +23,6 @@ pd.set_option("styler.render.max_elements", 1249090)
 
 
 
-
 def obter_timestamp_atual():
     """Retorna o timestamp atual no formato YYYY-MM-DD HH-MM-SS."""
     return datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
@@ -538,8 +537,6 @@ if __name__ == "__main__":
     print(f'indicadores_calc: \n{indicadores_calc}')
     print('\n===============================================\n')
 
-    
-    
     
     # Colunas para exibir os indicadores
     col1, col2, col3, col4 = st.columns(4)

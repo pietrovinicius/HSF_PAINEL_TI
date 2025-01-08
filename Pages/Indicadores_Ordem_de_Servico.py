@@ -40,6 +40,18 @@ def formatar_horas_df(df):
     df['HORAS_FORMATADA'] = df['HORAS_TOTAL'].apply(formatar_horas_individual)
     df = df.drop('HORAS_TOTAL', axis=1)
     return df
+                    
+def formatar_horas(horas):
+    """Formata as horas para o formato 'X horas Y minutos'."""
+    horas_int = int(horas)
+    minutos = int((horas - horas_int) * 60)
+    return f"{horas_int} hora(s) {minutos:02} minuto(s)"
+
+def formatar_ano_dia_mes_vazios(valor):
+     try:
+         return "{:.0f}".format(float(valor))  # Tenta converter para float e formatar
+     except (ValueError, TypeError):
+         return ""  # Retorna string vazia em caso de erro
 
 def preparar_download_excel(df, filename="dados.xlsx"):
     """Converte um DataFrame em um arquivo Excel na memória para download."""
@@ -146,32 +158,43 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
         
         with connection.cursor() as cursor:
             sql = """
-                    --banda Geral Tipo O.S. ANALITICO:
+                    --banda Geral / Tipo O.S. ANALITICO:
                     SELECT 
                         ATP.NR_SEQUENCIA AS ORDEM_SERVICO,
-                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) AS ANO,
-                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES,
-                        EXTRACT(DAY FROM MOSA.DT_ATIVIDADE) AS DIA,
-                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
+
+                        EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) AS ANO_ORDEM_SERVICO,
+                        EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO) AS MES_ORDEM_SERVICO,
+                        EXTRACT(DAY FROM ATP.DT_ORDEM_SERVICO) AS DIA_ORDEM_SERVICO,
+                        TO_CHAR(ATP.DT_ORDEM_SERVICO, 'Month') AS MES__ORDEM_SERVICO_TEXTO,
+
+                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) AS ANO_ATIVIDADE,
+                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES_ATIVIDADE,
+                        EXTRACT(DAY FROM MOSA.DT_ATIVIDADE) AS DIA_ATIVIDADE,
+                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES__ATIVIDADE_TEXTO,
                         MTOS.DS_TIPO AS TIPO,
-                        DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
+                        DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, ATP.IE_STATUS_ORDEM) AS STATUS,
                         DECODE(ATP.IE_PRIORIDADE, 'A', 'Alta', 'M', 'Média', 'E','Emergência', 'Fora da Prioridade') AS DS_PRIORIDADE, 
                         ABREVIA_NOME( INITCAP(OBTER_NOME_USUARIO(MOSA.NM_USUARIO_EXEC)),'A') AS ANALISTA,
                         MOSA.QT_MINUTO AS MINUTOS_TOTAL,
                         MGP.DS_GRUPO_PLANEJ AS GRUPO_PLANEJAMENTO
                     FROM	MAN_ORDEM_SERVICO ATP
-                    INNER JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
-                    INNER JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
-                    INNER JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
-                    INNER JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
-                    INNER JOIN MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
-                    INNER JOIN MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
-                    WHERE MOSA.DT_ATIVIDADE IS NOT NULL
-                    AND MGP.NR_SEQUENCIA = 22 
+                    LEFT JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
+                    LEFT JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
+                    LEFT JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
+                    LEFT JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
+                    LEFT JOIN MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
+                    LEFT JOIN MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
+                    --WHERE MOSA.DT_ATIVIDADE IS NOT NULL
+                    --AND MGP.NR_SEQUENCIA = 22 
+                    --AND ATP.DT_ORDEM_SERVICO BETWEEN SYSDATE - 8 AND SYSDATE
+                    --WHERE ATP.NR_SEQUENCIA = 158930
+                    --WHERE ATP.IE_STATUS_ORDEM = 1
+                    WHERE EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) >= 2024
+                    AND MGP.NR_SEQUENCIA = 22 -- TI
                     ORDER BY 
-                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
-                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) DESC,
-                        EXTRACT(DAY FROM MOSA.DT_ATIVIDADE),
+                        EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) DESC,
+                        EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO) DESC,
+                        EXTRACT(DAY FROM ATP.DT_ORDEM_SERVICO),
                         MTOS.DS_TIPO , MTOS.DS_TIPO
 
                     """
@@ -263,8 +286,11 @@ def calcular_indicadores(df):
         }
 
     total_ordens = len(df)
+    total_ordens_Aberta = len(df[df['STATUS'] == 'Aberta'])
     total_ordens_Encerrada = len(df[df['STATUS'] == 'Encerrada'])
     total_ordens_Processo = len(df[df['STATUS'] == 'Processo'])
+    
+    print(f'\n\n======\ntotal_ordens: {total_ordens}\ntotal_ordens_Aberta: {total_ordens_Aberta}\ntotal_ordens_Encerrada: {total_ordens_Encerrada}\ntotal_ordens_Processo: {total_ordens_Processo}  \n=====\n\n')
     
     # Extraindo distintos
     status_distintos = df['STATUS'].unique().tolist()
@@ -392,6 +418,7 @@ def calcular_indicadores_por_analista(df):
         "minutos_restantes": minutos_restantes,
          "Analistas_horas": analistas_horas
     }
+
 def exibir_cartoes_analistas(analistas_horas):
     """Exibe cartões com as horas de atividades de cada analista."""
 
@@ -411,12 +438,6 @@ def exibir_cartoes_analistas(analistas_horas):
                 analista, horas_minutos = analistas[i + j]
                 with cols[j]: # Adicionar cartao na coluna
                     st.metric(label=f"{analista}", value=f"{horas_minutos}")
-                    
-def formatar_horas(horas):
-    """Formata as horas para o formato 'X horas Y minutos'."""
-    horas_int = int(horas)
-    minutos = int((horas - horas_int) * 60)
-    return f"{horas_int} hora(s) {minutos:02} minuto(s)"
 
 def calcular_homem_hora(df):
     """Calcula o indicador Homem x Hora."""
@@ -684,14 +705,25 @@ if __name__ == "__main__":
         
          # Filtrando o data frame pelo ano selecionado
         if st.session_state['ano_selecionado'] is not None:
-            df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['ANO'] == st.session_state['ano_selecionado']]
+            df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'] == st.session_state['ano_selecionado']]
         
         # Filtrando o data frame pelo mes selecionado
         if st.session_state['mes_selecionado'] is not None:
-            df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['MES'] == st.session_state['mes_selecionado']]
+            df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['MES_ORDEM_SERVICO'] == st.session_state['mes_selecionado']]
         
         #tratamento de valores com casa decimal:
-        df_rel_1507_Tipo_OS_Analitico['ANO'] = df_rel_1507_Tipo_OS_Analitico['ANO'].apply(lambda x: "{:.0f}".format(x))
+        df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
+        
+        #formatando Ano da atividade com funcao:
+        df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
+        
+        #formatando Mes da atividade com funcao:
+        df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
+        
+        #formatando Mes da atividade com funcao:
+        df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
+        
+        
         df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
 
         st.write("---")
@@ -704,29 +736,29 @@ if __name__ == "__main__":
         #Adicionar grupo de planejamento
         
         st.write("---")  # Linha separadora
-        indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
+        #indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
         # Exibir os cartões dos analistas:
-        col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
-        with col1:
-            st.metric("Total de Atividades:", value=indicadores_calc_analitico["total_atividades"])
-        with col2:
-            st.write("")
-        with col3:
-            st.metric("Horas", value=indicadores_calc_analitico["total_horas"])
-            st.write("")
-        with col4:
-            st.metric("Minutos", value=indicadores_calc_analitico["minutos_restantes"])
-            st.write("")
-        with col5:
-            st.write("")
-        with col6:
-            st.write("")
-        with col7:
-            st.write("")
-        with col8:
-            st.write("")
+        #col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
+        #with col1:
+        #    st.metric("Total de Atividades:", value=indicadores_calc_analitico["total_atividades"])
+        #with col2:
+        #    st.write("")
+        #with col3:
+        #    st.metric("Horas", value=indicadores_calc_analitico["total_horas"])
+        #    st.write("")
+        #with col4:
+        #    st.metric("Minutos", value=indicadores_calc_analitico["minutos_restantes"])
+        #    st.write("")
+        #with col5:
+        #    st.write("")
+        #with col6:
+        #    st.write("")
+        #with col7:
+        #    st.write("")
+        #with col8:
+        #    st.write("")
             
-        exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])  
+        #exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])  
         st.write("---")  # Linha separadora 
         
         #TODO: grafico com horas de cada analista:
