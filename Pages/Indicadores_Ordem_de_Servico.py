@@ -530,59 +530,26 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
 
     st.plotly_chart(fig)
 
-def gerar_dataframe_para_grafico_barras_analistas(analistas_horas):
+def gerar_dataframe_para_grafico_barras_analistas(df):
     """Gera o DataFrame para o gráfico de barras dos analistas."""
-    if not analistas_horas:
-        return pd.DataFrame({'Analista': [], 'Horas': []})
+    if df.empty:
+        return pd.DataFrame({'Analista': [], 'Ordens': []})
 
-    analistas = list(analistas_horas.keys())
-    horas_str = list(analistas_horas.values())
+    # Agrupe por analista e conte as ordens de serviço
+    df_analistas = df.groupby('ANALISTA').size().reset_index(name='Ordens')
+    df_analistas = df_analistas.sort_values(by='Ordens', ascending=False) #ordena pela coluna Ordens
+    return df_analistas
 
-    #Função para pegar a quantidade de horas e converter em inteiro:
-    def obter_horas_inteiro(horas_str):
-        # Separa a string em horas e minutos
-        partes = horas_str.split('h')
-        horas = int(partes[0]) if partes[0] else 0
-        # Retorna o total em horas (sem considerar os minutos)
-        return horas
-    
-    #Função para pegar a quantidade de minutos e converter em inteiro:
-    def obter_minutos_inteiro(horas_str):
-         # Separa a string em horas e minutos
-        partes = horas_str.split('h')
-        # Verifique se a string possui minutos
-        if len(partes) > 1:
-            minutos = int(partes[1].replace('m',''))
-        else:
-            minutos = 0
-        # Retorna o total em minutos
-        return minutos
-    
-    # Extrai as horas e minutos convertendo para inteiros
-    horas = [obter_horas_inteiro(h) for h in horas_str]
-    minutos = [obter_minutos_inteiro(m) for m in horas_str]
-    #cria um array somando as horas com os minutos e convertendo tudo em horas:
-    total_horas = [h + (m/60) for h,m in zip(horas,minutos)]
-    
-    # Cria o DataFrame
-    df = pd.DataFrame({'Analista': analistas, 'Horas': total_horas})
-    
-    # Ordena o DataFrame pela coluna 'Horas' em ordem decrescente
-    df = df.sort_values(by='Horas', ascending=False)
-    
-    # Arredonda a coluna 'Horas' para duas casas decimais
-    df['Horas'] = df['Horas'].apply(lambda x: round(x, 2))
-    return df
-
-def exibir_grafico_barras_analistas(analistas_horas):
+def exibir_grafico_barras_analistas(df):
     """Exibe o gráfico de barras das horas de atividades por analista."""
     
-    if not analistas_horas:
+    if df.empty:
         st.warning("Não há dados para exibir o gráfico de barras dos analistas")
         return
     
     # Cria o DataFrame para o Plotly Express
-    df_analistas = gerar_dataframe_para_grafico_barras_analistas(analistas_horas)
+    df_analistas = gerar_dataframe_para_grafico_barras_analistas(df)
+    print(f'\n\n*****gerar_dataframe_para_grafico_barras_analistas(df)\n{df_analistas}')
     
     if df_analistas.empty:
         st.warning("Não há dados para exibir o gráfico de barras dos analistas")
@@ -592,10 +559,10 @@ def exibir_grafico_barras_analistas(analistas_horas):
     color_map = pc.qualitative.Plotly # Cores padrão do Plotly
 
     fig = px.bar(df_analistas,
-                x='Analista',
-                y='Horas',
-                title='Horas de Atividade por Analista',
-                color='Analista',  # Usar Analista para aplicar as cores
+                x='ANALISTA',
+                y='Ordens',
+                title='Quantidade de Ordens de Serviço por Analista',
+                color='ANALISTA',  # Usar Analista para aplicar as cores
                 color_discrete_sequence=color_map,
                 text_auto=True, #Habilitar os valores sobre as barras
                 )
@@ -608,14 +575,16 @@ def exibir_grafico_barras_analistas(analistas_horas):
     )
 
     fig.update_xaxes(title_text='Analistas')  # Alterar o rótulo do eixo x
-    fig.update_yaxes(title_text='Horas de Atividade')  # Alterar o rótulo do eixo y
+    fig.update_yaxes(title_text='Quantidade de Ordens')  # Alterar o rótulo do eixo y
     fig.update_traces(
         textposition='outside',
         textfont_family="Arial",
         textfont_size=13,
-        hovertemplate="<b>Analista:</b> %{x}<br><b>Total:</b> %{y:.2f} Horas"  # Personalizando o hovertemplate
+        hovertemplate="<b>Analista:</b> %{x}<br><b>Total:</b> %{y} Ordens"  # Personalizando o hovertemplate
     )
     st.plotly_chart(fig)
+    
+
     
 
 #=================================== MAIN #===================================
@@ -867,7 +836,7 @@ if __name__ == "__main__":
                 st.write("---")  # Linha separadora 
                 
                 #Grafico com horas de cada analista:
-                exibir_grafico_barras_analistas(indicadores_calc_analitico["Analistas_horas"])
+                exibir_grafico_barras_analistas(df_rel_1507_Tipo_OS_Analitico)
                 
                 
                 st.write("---")  # Linha separadora
