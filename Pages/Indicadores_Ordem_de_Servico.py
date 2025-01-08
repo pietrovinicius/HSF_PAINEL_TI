@@ -172,7 +172,7 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
                         EXTRACT(DAY FROM MOSA.DT_ATIVIDADE) AS DIA_ATIVIDADE,
                         TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES__ATIVIDADE_TEXTO,
                         MTOS.DS_TIPO AS TIPO,
-                        DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, ATP.IE_STATUS_ORDEM) AS STATUS,
+                        DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
                         DECODE(ATP.IE_PRIORIDADE, 'A', 'Alta', 'M', 'Média', 'E','Emergência', 'Fora da Prioridade') AS DS_PRIORIDADE, 
                         ABREVIA_NOME( INITCAP(OBTER_NOME_USUARIO(MOSA.NM_USUARIO_EXEC)),'A') AS ANALISTA,
                         MOSA.QT_MINUTO AS MINUTOS_TOTAL,
@@ -209,73 +209,6 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
     except Exception as erro:
         st.error(f"Erro Inesperado: {erro}. {obter_timestamp_atual()}")
         return pd.DataFrame()  # Retorna um DataFrame vazio em caso de erro
-
-
-@st.cache_data
-def REL_1507_Banda_Setor():
-    try:
-        # Chamar a função para obter o caminho do Instant Client
-        caminho_instantclient = encontrar_diretorio_instantclient()
-
-        # Usar o caminho encontrado para inicializar o Oracle Client
-        if caminho_instantclient:
-           oracledb.init_oracle_client(lib_dir=caminho_instantclient)
-        else:
-            st.error("Erro ao localizar o Instant Client. Verifique o nome da pasta e o caminho.")
-            return pd.DataFrame()
-
-        connection = oracledb.connect(user="TASY", password="aloisk", dsn="192.168.5.9:1521/TASYPRD")
-
-        with connection.cursor() as cursor:
-            sql = """              
-                    SELECT
-                        4 AS ORDEM,
-                        SAT.DS_SETOR_ATENDIMENTO AS LOCAL,
-                        --LAST_DAY(TRUNC(MOSA.DT_ATIVIDADE)) AS DATA,
-                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) AS ANO,
-                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES,
-                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
-                        DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
-                        COUNT(DISTINCT ATP.NR_SEQUENCIA) AS ORDEM_SERVICO_TOTAL,
-                        SUM(MOSA.QT_MINUTO) AS MINUTOS_TOTAL,
-                        ROUND(SUM(MOSA.QT_MINUTO) / 60) AS HORAS_TOTAL,
-                        LPAD(FLOOR((SUM(MOSA.QT_MINUTO) / 60) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 2, '0') AS HORA_HOMEM,
-                        RPAD(MOD(ROUND(SUM(MOSA.QT_MINUTO) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 60), 2, '0') AS MINUTOS_HOMEM,
-                        LPAD(FLOOR((SUM(MOSA.QT_MINUTO) / 60) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 2, '0') || ' horas e ' ||
-                        RPAD(MOD(ROUND(SUM(MOSA.QT_MINUTO) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 60), 2, '0') || ' minutos' AS HORAS_MINUTOS_HOMEM
-                    FROM    MAN_ORDEM_SERVICO ATP
-                    INNER JOIN    MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
-                    INNER JOIN    MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
-                    INNER JOIN    SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
-                    LEFT JOIN    MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
-                    LEFT JOIN    MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
-                    LEFT JOIN    MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
-                    --WHERE    TRUNC(MOSA.DT_ATIVIDADE) BETWEEN sysdate - 365 AND sysdate --:DT_INICIAL AND :DT_FINAL
-                    --PROTECAO DE VALORES NULL
-                    WHERE MOSA.DT_ATIVIDADE IS NOT NULL
-                    GROUP BY
-                        SAT.DS_SETOR_ATENDIMENTO,
-                        LAST_DAY(TRUNC(MOSA.DT_ATIVIDADE)),
-                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month'),
-                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE),
-                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE),
-                        ATP.IE_STATUS_ORDEM
-                    ORDER BY
-                        SAT.DS_SETOR_ATENDIMENTO ASC,
-                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
-                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) ASC
-                    """
-            cursor.execute(sql)
-            results = cursor.fetchall()
-            df = pd.DataFrame(results, columns=[desc[0] for desc in cursor.description])
-            st.success("Gerado as: " + obter_timestamp_atual())
-            return df
-    except oracledb.Error as e:
-       st.error(f"Erro no Oracle: {e}. {obter_timestamp_atual()}")
-       return pd.DataFrame()
-    except Exception as erro:
-        st.error(f"Erro Inesperado: {erro}. {obter_timestamp_atual()}")
-        return pd.DataFrame()
 
 def calcular_indicadores(df):
     """Calcula os indicadores de SLA, extrai status e tipos distintos."""
@@ -701,7 +634,7 @@ if __name__ == "__main__":
         df_rel_1507_Tipo_OS_Analitico = REL_1507_Banda_Geral_TP_OS_analitico()
         
         #Tratamento de valores null:
-        df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico.fillna('-')
+        #df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico.fillna('-')
         
          # Filtrando o data frame pelo ano selecionado
         if st.session_state['ano_selecionado'] is not None:
@@ -736,29 +669,30 @@ if __name__ == "__main__":
         #Adicionar grupo de planejamento
         
         st.write("---")  # Linha separadora
-        #indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
-        # Exibir os cartões dos analistas:
-        #col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
-        #with col1:
-        #    st.metric("Total de Atividades:", value=indicadores_calc_analitico["total_atividades"])
-        #with col2:
-        #    st.write("")
-        #with col3:
-        #    st.metric("Horas", value=indicadores_calc_analitico["total_horas"])
-        #    st.write("")
-        #with col4:
-        #    st.metric("Minutos", value=indicadores_calc_analitico["minutos_restantes"])
-        #    st.write("")
-        #with col5:
-        #    st.write("")
-        #with col6:
-        #    st.write("")
-        #with col7:
-        #    st.write("")
-        #with col8:
-        #    st.write("")
-            
-        #exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])  
+        indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
+        #Exibir os cartões dos analistas:
+        col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
+        with col1:
+            st.metric("Total de Atividades:", value=indicadores_calc_analitico["total_atividades"])
+        with col2:
+            st.write("")
+        with col3:
+            st.metric("Horas", value=indicadores_calc_analitico["total_horas"])
+            st.write("")
+        with col4:
+            st.metric("Minutos", value=indicadores_calc_analitico["minutos_restantes"])
+            st.write("")
+        with col5:
+            st.write("")
+        with col6:
+            st.write("")
+        with col7:
+            st.write("")
+        with col8:
+            st.write("")
+        
+        #Exibe os cartoes de cada analista:
+        exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])  
         st.write("---")  # Linha separadora 
         
         #TODO: grafico com horas de cada analista:
