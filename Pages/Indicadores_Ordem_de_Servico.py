@@ -535,22 +535,33 @@ def gerar_dataframe_para_grafico_barras_analistas(df):
     print(f'\ngerar_dataframe_para_grafico_barras_analistas()')
     if df.empty:
         return pd.DataFrame({'Analista': [], 'Ordens': []})
-
-    # Agrupe por analista e conte as ordens de serviço distintas
-    df_analistas = df.groupby('ANALISTA')['ORDEM_SERVICO'].nunique().reset_index(name='Ordens')
-    df_analistas = df_analistas.sort_values(by='Ordens', ascending=False)  # ordena pela coluna Ordens
+    
+    print(f'\ndf:\n{df[["ORDEM_SERVICO", "ANALISTA"]]} \n')
+    
+    # Remover duplicadas ANTES de agrupar
+    df_unique = df[["ORDEM_SERVICO", "ANALISTA"]].drop_duplicates()
+    print(f'\n\ndrop_duplicates()\ndf:\n{df_unique} \n')
+    
+    # Agrupar por analista e contar as ordens de serviço distintas
+    df_analistas = df_unique.groupby('ANALISTA')['ORDEM_SERVICO'].count().reset_index(name='Ordens')
+    
+    # Ordenar o DataFrame pela contagem de ordens em ordem decrescente
+    df_analistas = df_analistas.sort_values(by='Ordens', ascending=False)
+    
+    print(f'\ndf_analistas: \n{df_analistas}')
+    
     return df_analistas
+
 
 def exibir_grafico_barras_analistas(df):
     """Exibe o gráfico de barras das horas de atividades por analista."""
-    print(f'\nexibir_grafico_barras_analistas()')
+    
     if df.empty:
         st.warning("Não há dados para exibir o gráfico de barras dos analistas")
         return
     
     # Cria o DataFrame para o Plotly Express
     df_analistas = gerar_dataframe_para_grafico_barras_analistas(df)
-    print(f'\n\n*****gerar_dataframe_para_grafico_barras_analistas(df)\n{df_analistas}')
     
     if df_analistas.empty:
         st.warning("Não há dados para exibir o gráfico de barras dos analistas")
