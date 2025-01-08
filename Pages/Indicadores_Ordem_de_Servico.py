@@ -253,10 +253,12 @@ def calcular_indicadores(df):
     Ronda_Inspecao = contagem_por_tipo.get('Ronda/Inspeção', 0)
     Cadastro = contagem_por_tipo.get('Cadastro', 0)
     Suporte = contagem_por_tipo.get('Suporte', 0)
+    Relatorio = contagem_por_tipo.get('Relatório', 0)
     print(f'Corretiva: {Corretiva}')
     print(f'Ronda_Inspecao: {Ronda_Inspecao}')
     print(f'Cadastro: {Cadastro}')
     print(f'Suporte: {Suporte}')
+    print(f'Relatório: {Relatorio}')
 
     total_minutos = df['MINUTOS_TOTAL'].sum()
     print(f"============================================================================================")
@@ -285,6 +287,7 @@ def calcular_indicadores(df):
         "Ronda_Inspecao": Ronda_Inspecao,
         "Cadastro": Cadastro,
         "Suporte": Suporte,
+        "Relatorio": Relatorio,
         "total_horas": total_horas,
         "minutos_restantes": minutos_restantes
     } 
@@ -446,7 +449,7 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
     """Exibe o gráfico de barras da contagem de ordens de serviço por tipo."""
 
     # Extraindo dados do dicionário de indicadores
-    tipos_os = ['Corretiva', 'Ronda_Inspecao', 'Cadastro', 'Suporte']
+    tipos_os = ['Corretiva', 'Ronda_Inspecao', 'Cadastro', 'Suporte', 'Relatorio']
     contagens = [indicadores_calc.get(tipo, 0) for tipo in tipos_os]
 
     # Criando um DataFrame para o Plotly Express
@@ -457,7 +460,8 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
         'Corretiva': 'skyblue',
         'Ronda_Inspecao': 'orange',
         'Cadastro': 'lightgreen',
-        'Suporte': 'lightcoral'
+        'Suporte': 'lightcoral',
+        'Relatorio': 'pink',
     }
 
     fig = px.bar(df_tipos,
