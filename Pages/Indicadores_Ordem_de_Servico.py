@@ -60,8 +60,6 @@ def preparar_download_excel(df, filename="dados.xlsx"):
         df.to_excel(writer, sheet_name='Sheet1', index=False)
     return output.getvalue()
 
-
-
 def encontrar_diretorio_instantclient(
         nome_pasta="instantclient-basiclite-windows.x64-23.6.0.24.10\\instantclient_23_6"):
     """
@@ -97,13 +95,27 @@ def REL_1507_Banda_Geral_Tipo_OS():
         
         with connection.cursor() as cursor:
             sql = """
-                             
+                    --banda Geral / Tipo O.S.:    
                     SELECT 
-                        5 AS ORDEM, 
-                        'HSF-GERAL-TIPO' AS LOCAL, 
-                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) AS ANO,
-                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) AS MES,
-                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') AS MES_TEXTO,
+                    
+                        NVL(
+                            EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) 
+                            ,
+                            EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO)
+                        )
+                        AS ANO,
+                        
+                        NVL(
+                            EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) 
+                            ,
+                            EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO)
+                        )
+                        AS MES,
+                        NVL(
+                            TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') 
+                            ,
+                            TO_CHAR(ATP.DT_ORDEM_SERVICO, 'Month') 
+                        )AS MES_TEXTO,
                         DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
                         MTOS.DS_TIPO AS TIPO,
                         COUNT(DISTINCT ATP.NR_SEQUENCIA) AS ORDEM_SERVICO_TOTAL,
@@ -115,15 +127,15 @@ def REL_1507_Banda_Geral_Tipo_OS():
                         RPAD(MOD(ROUND(SUM(MOSA.QT_MINUTO) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 60), 2, '0') || ' minutos' AS HORAS_MINUTOS_HOMEM,
                         MGP.DS_GRUPO_PLANEJ AS GRUPO_PLANEJAMENTO
                     FROM	MAN_ORDEM_SERVICO ATP
-                    INNER JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
-                    INNER JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
-                    INNER JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
-                    INNER JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
-                    INNER JOIN MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
-                    INNER JOIN MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
-                    WHERE MOSA.DT_ATIVIDADE IS NOT NULL
-                    AND MGP.NR_SEQUENCIA = 22 
-                    GROUP BY  MOSA.DT_ATIVIDADE, ATP.IE_STATUS_ORDEM, MTOS.DS_TIPO, MGP.DS_GRUPO_PLANEJ
+                    LEFT JOIN MAN_GRUPO_TRABALHO SA ON SA.NR_SEQUENCIA = ATP.NR_GRUPO_TRABALHO
+                    LEFT JOIN MAN_LOCALIZACAO ML ON ML.NR_SEQUENCIA = ATP.NR_SEQ_LOCALIZACAO
+                    LEFT JOIN SETOR_ATENDIMENTO SAT ON SAT.CD_SETOR_ATENDIMENTO = ML.CD_SETOR
+                    LEFT JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
+                    LEFT JOIN MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
+                    LEFT JOIN MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
+                    WHERE EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) >= 2024
+                    AND MGP.NR_SEQUENCIA = 22 -- TI 
+                    GROUP BY  MOSA.DT_ATIVIDADE, ATP.IE_STATUS_ORDEM, MTOS.DS_TIPO, MGP.DS_GRUPO_PLANEJ, ATP.DT_ORDEM_SERVICO
                     ORDER BY 
                         EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
                         EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) DESC,
@@ -473,8 +485,8 @@ if __name__ == "__main__":
 ########################################################################################
         with st.sidebar:
             # Obtendo a lista de anos distintos
-            df_rel_1507_Banda_Geral_Tipo_OS = REL_1507_Banda_Geral_Tipo_OS()
-            anos_distintos = sorted(df_rel_1507_Banda_Geral_Tipo_OS['ANO'].unique(), reverse=True)
+            df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
+            anos_distintos = sorted(df_ordens_geral['ANO'].unique(), reverse=True)
             # Filtra os anos, mantendo apenas os iguais ou superiores a 2022
             anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2024]
             anos_distintos = anos_distintos[:6]
@@ -495,9 +507,9 @@ if __name__ == "__main__":
             
             # Filtrando o Data Frame pelo ano selecionado
             if st.session_state['ano_selecionado'] is not None:
-                df_filtered_ano = df_rel_1507_Banda_Geral_Tipo_OS[df_rel_1507_Banda_Geral_Tipo_OS['ANO'] == st.session_state['ano_selecionado']]
+                df_filtered_ano = df_ordens_geral[df_ordens_geral['ANO'] == st.session_state['ano_selecionado']]
             else:
-                df_filtered_ano = df_rel_1507_Banda_Geral_Tipo_OS.copy()
+                df_filtered_ano = df_ordens_geral.copy()
         
             # Obtendo a lista de meses distintos para o ano selecionado
             meses_distintos = sorted(df_filtered_ano['MES'].unique())
@@ -529,22 +541,22 @@ if __name__ == "__main__":
 ########################################################################################
 
         #Geracao de Data Frame:
-        df_rel_1507_Banda_Geral_Tipo_OS = REL_1507_Banda_Geral_Tipo_OS()
+        df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
         
         #Tratamento de valores null:
-        df_rel_1507_Banda_Geral_Tipo_OS = df_rel_1507_Banda_Geral_Tipo_OS = df_rel_1507_Banda_Geral_Tipo_OS.fillna('-')
+        #df_ordens_geral = df_ordens_geral = df_ordens_geral.fillna('-')
         
          # Filtrando o data frame pelo ano selecionado
         if st.session_state['ano_selecionado'] is not None:
-            df_rel_1507_Banda_Geral_Tipo_OS = df_rel_1507_Banda_Geral_Tipo_OS[df_rel_1507_Banda_Geral_Tipo_OS['ANO'] == st.session_state['ano_selecionado']]
+            df_ordens_geral = df_ordens_geral[df_ordens_geral['ANO'] == st.session_state['ano_selecionado']]
         
         # Filtrando o data frame pelo mes selecionado
         if st.session_state['mes_selecionado'] is not None:
-            df_rel_1507_Banda_Geral_Tipo_OS = df_rel_1507_Banda_Geral_Tipo_OS[df_rel_1507_Banda_Geral_Tipo_OS['MES'] == st.session_state['mes_selecionado']]
+            df_ordens_geral = df_ordens_geral[df_ordens_geral['MES'] == st.session_state['mes_selecionado']]
         
         #tratamento de valores com casa decimal:
-        df_rel_1507_Banda_Geral_Tipo_OS['ANO'] = df_rel_1507_Banda_Geral_Tipo_OS['ANO'].apply(lambda x: "{:.0f}".format(x))
-        #df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'] = df_rel_1507_Banda_Geral_Tipo_OS['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
+        df_ordens_geral['ANO'] = df_ordens_geral['ANO'].apply(lambda x: "{:.0f}".format(x))
+        #df_ordens_geral['MINUTOS_TOTAL'] = df_ordens_geral['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
         
         st.write("---")
         st.write('## Ordens de Serviço:')
@@ -552,7 +564,7 @@ if __name__ == "__main__":
         st.write("---")  # Linha separadora
                 
         # Calculo de Indicadores
-        indicadores_calc = calcular_indicadores(df_rel_1507_Banda_Geral_Tipo_OS)
+        indicadores_calc = calcular_indicadores(df_ordens_geral)
         
         col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
         with col1:
@@ -604,19 +616,19 @@ if __name__ == "__main__":
         
         colPizza , colBarras = st.columns(2)
         with colPizza:
-            exibir_grafico_pizza(df_rel_1507_Banda_Geral_Tipo_OS)
+            exibir_grafico_pizza(df_ordens_geral)
         with colBarras:
             exibir_grafico_barras_tipo_os(indicadores_calc)
             
         
         
-        #DATA FRAME df_rel_1507_Banda_Geral_Tipo_OS:
+        #DATA FRAME df_ordens_geral:
         #st.write("---")  # Linha separadora
         #st.subheader("Geral por tipo de O.S.:")
-        #st.dataframe(df_rel_1507_Banda_Geral_Tipo_OS,hide_index=True, use_container_width=True)
+        #st.dataframe(df_ordens_geral,hide_index=True, use_container_width=True)
         #
         ## Disponibilizar o botão de download
-        #download_xlsx = preparar_download_excel(df_rel_1507_Banda_Geral_Tipo_OS)
+        #download_xlsx = preparar_download_excel(df_ordens_geral)
         #st.download_button(
         #    label="Download em XLSX",
         #    data=download_xlsx,
