@@ -532,17 +532,18 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
 
 def gerar_dataframe_para_grafico_barras_analistas(df):
     """Gera o DataFrame para o gráfico de barras dos analistas."""
+    print(f'\ngerar_dataframe_para_grafico_barras_analistas()')
     if df.empty:
         return pd.DataFrame({'Analista': [], 'Ordens': []})
 
-    # Agrupe por analista e conte as ordens de serviço
-    df_analistas = df.groupby('ANALISTA').size().reset_index(name='Ordens')
-    df_analistas = df_analistas.sort_values(by='Ordens', ascending=False) #ordena pela coluna Ordens
+    # Agrupe por analista e conte as ordens de serviço distintas
+    df_analistas = df.groupby('ANALISTA')['ORDEM_SERVICO'].nunique().reset_index(name='Ordens')
+    df_analistas = df_analistas.sort_values(by='Ordens', ascending=False)  # ordena pela coluna Ordens
     return df_analistas
 
 def exibir_grafico_barras_analistas(df):
     """Exibe o gráfico de barras das horas de atividades por analista."""
-    
+    print(f'\nexibir_grafico_barras_analistas()')
     if df.empty:
         st.warning("Não há dados para exibir o gráfico de barras dos analistas")
         return
