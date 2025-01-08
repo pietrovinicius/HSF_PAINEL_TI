@@ -96,7 +96,6 @@ def REL_1507_Banda_Geral_Tipo_OS():
             sql = """
                     --banda Geral / Tipo O.S.:    
                     SELECT 
-                    
                         NVL(
                             EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) 
                             ,
@@ -200,7 +199,7 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
                     --AND ATP.DT_ORDEM_SERVICO BETWEEN SYSDATE - 8 AND SYSDATE
                     --WHERE ATP.NR_SEQUENCIA = 158930
                     --WHERE ATP.IE_STATUS_ORDEM = 1
-                    WHERE EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) >= 2024
+                    WHERE EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) >= 2022
                     AND MGP.NR_SEQUENCIA = 22 -- TI
                     ORDER BY 
                         EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) DESC,
@@ -351,7 +350,7 @@ def calcular_indicadores_por_analista(df):
     print(f"Valores distintos da coluna 'ANALISTA':\n{analistas_distintos}")
     # Agrupar por analista e somar os minutos
     analistas_minutos = df.groupby('ANALISTA')['MINUTOS_TOTAL'].sum()
-
+    print(f'analistas_minutos: {analistas_minutos}')
     # Dicionário para armazenar as horas por analista
     analistas_horas = {}
 
@@ -673,29 +672,31 @@ if __name__ == "__main__":
                 
                 st.write("---")  # Linha separadora
                 
-                #exibir o gráfico de barras
-                exibir_grafico_barras(df_ordens_geral)
-                
-                st.write("---")  # Linha separadora
-                exibir_grafico_barras_tipo_os(indicadores_calc)
+                col1,col2 = st.columns(2)
+                with col1:
+                    #exibir o gráfico de barras das ordens por status
+                    exibir_grafico_barras(df_ordens_geral)
+                with col2:
+                    #exibir o gráfico de barras dos tipos de OS
+                    exibir_grafico_barras_tipo_os(indicadores_calc)
                     
-                
-                
-                #DATA FRAME df_ordens_geral:
-                st.write("---")  # Linha separadora
-                st.subheader("Geral por tipo de O.S.:")
-                st.dataframe(df_ordens_geral,hide_index=True, use_container_width=True)
-                
-                # Disponibilizar o botão de download
-                download_xlsx = preparar_download_excel(df_ordens_geral)
-                st.download_button(
-                    label="Download em XLSX",
-                    data=download_xlsx,
-                    file_name='dados_sla.xlsx',
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+                    
+                ##DATA FRAME df_ordens_geral:
+                #st.write("---")  # Linha separadora
+                #st.subheader("Geral por tipo de O.S.:")
+                #st.dataframe(df_ordens_geral,hide_index=True, use_container_width=True)
+                #
+                ## Disponibilizar o botão de download
+                #download_xlsx = preparar_download_excel(df_ordens_geral)
+                #st.download_button(
+                #    label="Download em XLSX",
+                #    data=download_xlsx,
+                #    file_name='dados_sla.xlsx',
+                #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                #)
                 
                 # Criar uma nova linha abaixo dos indicadores para o botão de download
+                st.write("---")  # Linha separadora
                 st.write("---")  # Linha separadora
                 
                 
@@ -709,13 +710,14 @@ if __name__ == "__main__":
                 
                 # Filtrando o data frame pelo ano selecionado
                 if st.session_state['ano_selecionado'] is not None:
-                    df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'] == st.session_state['ano_selecionado']]
+                    df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] == st.session_state['ano_selecionado']]
                 
                 # Filtrando o data frame pelo mes selecionado
                 if st.session_state['mes_selecionado'] is not None:
-                    df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['MES_ORDEM_SERVICO'] == st.session_state['mes_selecionado']]
+                    df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'] == st.session_state['mes_selecionado']]
                 
                 #tratamento de valores com casa decimal:
+                df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'].apply(lambda x: "{:.0f}".format(x))
                 df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
                 
                 #formatando Ano da atividade com funcao:
@@ -727,8 +729,6 @@ if __name__ == "__main__":
                 #formatando Mes da atividade com funcao:
                 df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
                 
-                
-                df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
 
                 st.write("---")
                 st.write('## Atividades por Analistas:')
