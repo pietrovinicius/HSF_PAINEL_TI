@@ -480,6 +480,8 @@ def exibir_grafico_barras(df):
         customdata=status_counts[['percent']]
     )
     fig.update_layout(yaxis_title="Quantidade de Ordens")
+    fig.update_xaxes(title_text='Status')  # Alterar o rótulo do eixo x
+    fig.update_yaxes(title_text='Ordens de Serviços')  # Alterar o rótulo do eixo y
     st.plotly_chart(fig)
 
 def exibir_grafico_barras_tipo_os(indicadores_calc):
@@ -528,6 +530,94 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
 
     st.plotly_chart(fig)
 
+def gerar_dataframe_para_grafico_barras_analistas(analistas_horas):
+    """Gera o DataFrame para o gráfico de barras dos analistas."""
+    if not analistas_horas:
+        return pd.DataFrame({'Analista': [], 'Horas': []})
+
+    analistas = list(analistas_horas.keys())
+    horas_str = list(analistas_horas.values())
+
+    #Função para pegar a quantidade de horas e converter em inteiro:
+    def obter_horas_inteiro(horas_str):
+        # Separa a string em horas e minutos
+        partes = horas_str.split('h')
+        horas = int(partes[0]) if partes[0] else 0
+        # Retorna o total em horas (sem considerar os minutos)
+        return horas
+    
+    #Função para pegar a quantidade de minutos e converter em inteiro:
+    def obter_minutos_inteiro(horas_str):
+         # Separa a string em horas e minutos
+        partes = horas_str.split('h')
+        # Verifique se a string possui minutos
+        if len(partes) > 1:
+            minutos = int(partes[1].replace('m',''))
+        else:
+            minutos = 0
+        # Retorna o total em minutos
+        return minutos
+    
+    # Extrai as horas e minutos convertendo para inteiros
+    horas = [obter_horas_inteiro(h) for h in horas_str]
+    minutos = [obter_minutos_inteiro(m) for m in horas_str]
+    #cria um array somando as horas com os minutos e convertendo tudo em horas:
+    total_horas = [h + (m/60) for h,m in zip(horas,minutos)]
+    
+    # Cria o DataFrame
+    df = pd.DataFrame({'Analista': analistas, 'Horas': total_horas})
+    
+    # Ordena o DataFrame pela coluna 'Horas' em ordem decrescente
+    df = df.sort_values(by='Horas', ascending=False)
+    
+    # Arredonda a coluna 'Horas' para duas casas decimais
+    df['Horas'] = df['Horas'].apply(lambda x: round(x, 2))
+    return df
+
+def exibir_grafico_barras_analistas(analistas_horas):
+    """Exibe o gráfico de barras das horas de atividades por analista."""
+    
+    if not analistas_horas:
+        st.warning("Não há dados para exibir o gráfico de barras dos analistas")
+        return
+    
+    # Cria o DataFrame para o Plotly Express
+    df_analistas = gerar_dataframe_para_grafico_barras_analistas(analistas_horas)
+    
+    if df_analistas.empty:
+        st.warning("Não há dados para exibir o gráfico de barras dos analistas")
+        return
+
+    # Mapeamento de cores (opcional, se quiser cores customizadas)
+    color_map = pc.qualitative.Plotly # Cores padrão do Plotly
+
+    fig = px.bar(df_analistas,
+                x='Analista',
+                y='Horas',
+                title='Horas de Atividade por Analista',
+                color='Analista',  # Usar Analista para aplicar as cores
+                color_discrete_sequence=color_map,
+                text_auto=True, #Habilitar os valores sobre as barras
+                )
+
+    fig.update_layout(
+        showlegend=True,
+        legend_title_text=" ",
+        margin=dict(l=20, r=20, t=60, b=20),
+        title_font=dict(size=17),
+    )
+
+    fig.update_xaxes(title_text='Analistas')  # Alterar o rótulo do eixo x
+    fig.update_yaxes(title_text='Horas de Atividade')  # Alterar o rótulo do eixo y
+    fig.update_traces(
+        textposition='outside',
+        textfont_family="Arial",
+        textfont_size=13,
+        hovertemplate="<b>Analista:</b> %{x}<br><b>Total:</b> %{y:.2f} Horas"  # Personalizando o hovertemplate
+    )
+    st.plotly_chart(fig)
+    
+
 #=================================== MAIN #===================================
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
@@ -546,13 +636,11 @@ if __name__ == "__main__":
                     anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2024]
                     anos_distintos = anos_distintos[:6]
                     
-                    
                     # Inicializa o ano mais recente
                     if 'ano_selecionado' not in st.session_state:
                         st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
                     
                     st.write("---")
-                
                 
                     # Cria os botões para selecionar o ano
                     if anos_distintos:
@@ -681,32 +769,32 @@ if __name__ == "__main__":
                     
                 
                 
-                #DATA FRAME df_ordens_geral:
-                st.write("---")  # Linha separadora
-                st.subheader("Geral por tipo de O.S.:")
-                print(f'\n\n*****df_ordens_geral: \n{df_ordens_geral.columns}')
-                
-                #Escolhendo e depois Renomeando colunas:
-                df_ordens_geral_AJUSTADO = df_ordens_geral[[
-                                                                'ANO','MES_TEXTO','STATUS','TIPO','HORAS_MINUTOS_HOMEM'
-                                                                    ]].rename(columns={
-                                                                        'ANO': 'Ano',
-                                                                        'MES_TEXTO': 'Mês',
-                                                                        'TIPO': 'Tipo',
-                                                                        'STATUS': 'Status',
-                                                                        'HORAS_MINUTOS_HOMEM': 'Tempo'
-                                                                    })
-                
-                st.dataframe(df_ordens_geral_AJUSTADO,hide_index=True, use_container_width=True)
-                
-                # Disponibilizar o botão de download
-                download_xlsx = preparar_download_excel(df_ordens_geral)
-                st.download_button(
-                    label="Download em XLSX",
-                    data=download_xlsx,
-                    file_name='dados_sla.xlsx',
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+                ##DATA FRAME df_ordens_geral:
+                #st.write("---")  # Linha separadora
+                #st.subheader("Geral por tipo de O.S.:")
+                #print(f'\n\n*****df_ordens_geral: \n{df_ordens_geral.columns}')
+                #
+                ##Escolhendo e depois Renomeando colunas:
+                #df_ordens_geral_AJUSTADO = df_ordens_geral[[
+                #                                                'ANO','MES_TEXTO','STATUS','TIPO','HORAS_MINUTOS_HOMEM'
+                #                                                    ]].rename(columns={
+                #                                                        'ANO': 'Ano',
+                #                                                        'MES_TEXTO': 'Mês',
+                #                                                        'TIPO': 'Tipo',
+                #                                                        'STATUS': 'Status',
+                #                                                        'HORAS_MINUTOS_HOMEM': 'Tempo'
+                #                                                    })
+                #
+                #st.dataframe(df_ordens_geral_AJUSTADO,hide_index=True, use_container_width=True)
+                #
+                ## Disponibilizar o botão de download
+                #download_xlsx = preparar_download_excel(df_ordens_geral)
+                #st.download_button(
+                #    label="Download em XLSX",
+                #    data=download_xlsx,
+                #    file_name='dados_sla.xlsx',
+                #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                #)
                 
                 # Criar uma nova linha abaixo dos indicadores para o botão de download
                 st.write("---")  # Linha separadora
@@ -778,9 +866,11 @@ if __name__ == "__main__":
                 exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])  
                 st.write("---")  # Linha separadora 
                 
-                #TODO: grafico com horas de cada analista:
+                #Grafico com horas de cada analista:
+                exibir_grafico_barras_analistas(indicadores_calc_analitico["Analistas_horas"])
                 
                 
+                st.write("---")  # Linha separadora
                 st.write("---")  # Linha separadora
                 st.subheader("Geral por Atividades:")
                 print(f'\n\n\ndf_rel_1507_Tipo_OS_Analitico\nColunas:\n{df_rel_1507_Tipo_OS_Analitico.columns}')
