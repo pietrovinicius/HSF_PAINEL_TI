@@ -681,19 +681,32 @@ if __name__ == "__main__":
                     
                 
                 
-                ##DATA FRAME df_ordens_geral:
-                #st.write("---")  # Linha separadora
-                #st.subheader("Geral por tipo de O.S.:")
-                #st.dataframe(df_ordens_geral,hide_index=True, use_container_width=True)
-                #
-                ## Disponibilizar o botão de download
-                #download_xlsx = preparar_download_excel(df_ordens_geral)
-                #st.download_button(
-                #    label="Download em XLSX",
-                #    data=download_xlsx,
-                #    file_name='dados_sla.xlsx',
-                #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                #)
+                #DATA FRAME df_ordens_geral:
+                st.write("---")  # Linha separadora
+                st.subheader("Geral por tipo de O.S.:")
+                print(f'\n\n*****df_ordens_geral: \n{df_ordens_geral.columns}')
+                
+                #Escolhendo e depois Renomeando colunas:
+                df_ordens_geral_AJUSTADO = df_ordens_geral[[
+                                                                'ANO','MES_TEXTO','STATUS','TIPO','HORAS_MINUTOS_HOMEM'
+                                                                    ]].rename(columns={
+                                                                        'ANO': 'Ano',
+                                                                        'MES_TEXTO': 'Mês',
+                                                                        'TIPO': 'Tipo',
+                                                                        'STATUS': 'Status',
+                                                                        'HORAS_MINUTOS_HOMEM': 'Tempo'
+                                                                    })
+                
+                st.dataframe(df_ordens_geral_AJUSTADO,hide_index=True, use_container_width=True)
+                
+                # Disponibilizar o botão de download
+                download_xlsx = preparar_download_excel(df_ordens_geral)
+                st.download_button(
+                    label="Download em XLSX",
+                    data=download_xlsx,
+                    file_name='dados_sla.xlsx',
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
                 
                 # Criar uma nova linha abaixo dos indicadores para o botão de download
                 st.write("---")  # Linha separadora
@@ -719,6 +732,7 @@ if __name__ == "__main__":
                 #tratamento de valores com casa decimal:
                 df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'].apply(lambda x: "{:.0f}".format(x))
                 df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
+                df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
                 
                 #formatando Ano da atividade com funcao:
                 df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
@@ -768,8 +782,26 @@ if __name__ == "__main__":
                 
                 
                 st.write("---")  # Linha separadora
-                st.subheader("Atividades:")
-                st.dataframe(df_rel_1507_Tipo_OS_Analitico,hide_index=True, use_container_width=True)
+                st.subheader("Geral por Atividades:")
+                print(f'\n\n\ndf_rel_1507_Tipo_OS_Analitico\nColunas:\n{df_rel_1507_Tipo_OS_Analitico.columns}')
+
+                
+                #Escolhendo e depois Renomeando colunas:
+                df_rel_1507_AJUSTADO = df_rel_1507_Tipo_OS_Analitico[[
+                                                                        'ORDEM_SERVICO', 'ANO_ATIVIDADE', 'MES__ATIVIDADE_TEXTO', 'TIPO', 
+                                                                        'STATUS', 'DS_PRIORIDADE', 'ANALISTA', 'MINUTOS_TOTAL'
+                                                                    ]].rename(columns={
+                                                                        'ORDEM_SERVICO': 'OS',
+                                                                        'ANO_ATIVIDADE': 'Ano',
+                                                                        'MES__ATIVIDADE_TEXTO': 'Mês',
+                                                                        'TIPO': 'Tipo',
+                                                                        'STATUS': 'Status',
+                                                                        'DS_PRIORIDADE': 'Prioridade',
+                                                                        'ANALISTA': 'Responsável',
+                                                                        'MINUTOS_TOTAL': 'Minutos'
+                                                                    })
+
+                st.dataframe(df_rel_1507_AJUSTADO,hide_index=True, use_container_width=True)
                 
                 # Disponibilizar o botão de download
                 download_xlsx = preparar_download_excel(df_rel_1507_Tipo_OS_Analitico)
