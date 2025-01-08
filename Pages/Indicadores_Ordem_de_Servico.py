@@ -260,11 +260,17 @@ def calcular_indicadores(df):
 
     total_minutos = df['MINUTOS_TOTAL'].sum()
     print(f"============================================================================================")
-    print(f"total_minutos: {total_minutos}")
+    
+    #Precisei arredondar o número e depois o transformar em inteiro:
+    print(f"total_minutos: {int(round(total_minutos))}")
     total_horas = total_minutos // 60
     minutos_restantes = total_minutos % 60
-    total_horas = str(total_horas) + 'h'
-    minutos_restantes = str(minutos_restantes) + 'm'
+    
+    #Precisei arredondar o número e depois o transformar em inteiro:
+    total_horas = str(int(round(total_horas))) + 'h'
+    
+    #Precisei arredondar o número e depois o transformar em inteiro:
+    minutos_restantes = str(int(round(minutos_restantes))) + 'm'
     print(f"Total: {total_horas}")
     print(f"minutos_restantes: {minutos_restantes}")
     
@@ -283,7 +289,6 @@ def calcular_indicadores(df):
         "minutos_restantes": minutos_restantes
     } 
     
-#TODO: calcular_indicadores por analista
 def calcular_indicadores_por_analista(df):
     print(f"\n=====calcular_indicadores_por_analista")
     
@@ -322,11 +327,17 @@ def calcular_indicadores_por_analista(df):
     
     total_minutos = df['MINUTOS_TOTAL'].sum()
     print(f"============================================================================================")
-    print(f"total_minutos: {total_minutos}")
+    #Precisei arredondar o número e depois o transformar em inteiro:
+    print(f"total_minutos: {int(round(total_minutos))}")
     total_horas = total_minutos // 60
     minutos_restantes = total_minutos % 60
-    total_horas = str(total_horas) + 'h'
-    minutos_restantes = str(minutos_restantes) + 'm'
+
+    #Precisei arredondar o número e depois o transformar em inteiro:
+    total_horas = str(int(round(total_horas))) + 'h'
+    
+    #Precisei arredondar o número e depois o transformar em inteiro:
+    minutos_restantes = str(int(round(minutos_restantes))) + 'm'
+    
     print(f"Total Horas: {total_horas}")
     print(f"minutos_restantes: {minutos_restantes}")
 
@@ -345,7 +356,8 @@ def calcular_indicadores_por_analista(df):
         # Converter minutos para horas e minutos
         total_horas_analista = total_minutos // 60
         minutos_restantes_analista = total_minutos % 60
-        horas_minutos = f"{total_horas_analista}h {minutos_restantes_analista}m"
+        #Precisei arredondar o número e depois o transformar em inteiro:
+        horas_minutos = f"{int(round(total_horas_analista))}h {int(round(minutos_restantes_analista))}m"
         analistas_horas[analista] = horas_minutos
         
     print(f"*******\nAnalistas_horas: \n{analistas_horas}\n*******")
@@ -369,8 +381,9 @@ def exibir_cartoes_analistas(analistas_horas):
 
     if not analistas_horas:
       st.warning("Não há dados para exibir os cartões dos analistas")
+      st.empty()
       return
-    
+
     num_colunas = 3  # Quantidade de colunas por linha
     analistas = list(analistas_horas.items()) # Converte em lista
     
@@ -457,12 +470,13 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
                )
 
     fig.update_layout(
+        showlegend=True,
         legend_title_text=" ",
         margin=dict(l=20, r=20, t=60, b=20),
         title_font=dict(size=17),
     )
 
-    fig.update_xaxes(title_text='')  # Alterar o rótulo do eixo x
+    fig.update_xaxes(title_text='Tipos de O.S')  # Alterar o rótulo do eixo x
     fig.update_yaxes(title_text='Número de Ordens')  # Alterar o rótulo do eixo y
     fig.update_traces(
         textposition='outside',
@@ -677,8 +691,6 @@ if __name__ == "__main__":
         #TODO:
         #Adicionar gráfico de prioridades
         
-        #TODO:
-        #Adicionar grupo de planejamento
         
         st.write("---")  # Linha separadora
         indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
