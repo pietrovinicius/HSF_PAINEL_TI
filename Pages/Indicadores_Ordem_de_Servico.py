@@ -97,28 +97,27 @@ def REL_1507_Banda_Geral_Tipo_OS():
             sql = """
                     --banda Geral / Tipo O.S.:    
                     SELECT 
+                        ATP.NR_SEQUENCIA AS ORDEM_SERVICO,
+                        nvl(ABREVIA_NOME(INITCAP(OBTER_NOME_USUARIO(MOSA.NM_USUARIO_EXEC)),'A'),'') AS ANALISTA,
                         NVL(
-                            EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) 
-                            ,
+                            EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE),
                             EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO)
-                        )
-                        AS ANO,
-                        
+                        ) AS ANO,
                         NVL(
-                            EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) 
-                            ,
+                            EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE),
                             EXTRACT(MONTH FROM ATP.DT_ORDEM_SERVICO)
-                        )
-                        AS MES,
+                        ) AS MES,
                         NVL(
-                            TO_CHAR(MOSA.DT_ATIVIDADE, 'Month') 
-                            ,
-                            TO_CHAR(ATP.DT_ORDEM_SERVICO, 'Month') 
-                        )AS MES_TEXTO,
+                            TO_CHAR(MOSA.DT_ATIVIDADE, 'Month'),
+                            TO_CHAR(ATP.DT_ORDEM_SERVICO, 'Month')
+                        ) AS MES_TEXTO,
                         DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
                         MTOS.DS_TIPO AS TIPO,
+                        
                         COUNT(DISTINCT ATP.NR_SEQUENCIA) AS ORDEM_SERVICO_TOTAL,
-                        SUM(MOSA.QT_MINUTO) AS MINUTOS_TOTAL, 
+                        
+                        SUM(MOSA.QT_MINUTO) AS MINUTOS_TOTAL,
+                        
                         ROUND(SUM(MOSA.QT_MINUTO) / 60) AS HORAS_TOTAL,
                         LPAD(FLOOR((SUM(MOSA.QT_MINUTO) / 60) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 2, '0') AS HORA_HOMEM,
                         RPAD(MOD(ROUND(SUM(MOSA.QT_MINUTO) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 60), 2, '0') AS MINUTOS_HOMEM,
@@ -132,13 +131,23 @@ def REL_1507_Banda_Geral_Tipo_OS():
                     LEFT JOIN MAN_GRUPO_PLANEJAMENTO MGP ON MGP.NR_SEQUENCIA = ATP.NR_GRUPO_PLANEJ
                     LEFT JOIN MAN_ORDEM_SERV_ATIV MOSA ON MOSA.NR_SEQ_ORDEM_SERV = ATP.NR_SEQUENCIA
                     LEFT JOIN MAN_TIPO_ORDEM_SERVICO MTOS ON MTOS.NR_SEQUENCIA = ATP.NR_SEQ_TIPO_ORDEM
-                    WHERE EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) >= 2024
-                    AND MGP.NR_SEQUENCIA = 22 -- TI 
-                    GROUP BY  MOSA.DT_ATIVIDADE, ATP.IE_STATUS_ORDEM, MTOS.DS_TIPO, MGP.DS_GRUPO_PLANEJ, ATP.DT_ORDEM_SERVICO
+                    WHERE EXTRACT(YEAR FROM ATP.DT_ORDEM_SERVICO) >= 2022
+                    AND MGP.NR_SEQUENCIA = 22
+                    GROUP BY 
+                        EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE),
+                        EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE),
+                        TO_CHAR(MOSA.DT_ATIVIDADE, 'Month'),
+                        ATP.IE_STATUS_ORDEM,
+                        MTOS.DS_TIPO,
+                        MGP.DS_GRUPO_PLANEJ,
+                        ATP.DT_ORDEM_SERVICO,
+                        ATP.NR_SEQUENCIA,
+                        MOSA.NM_USUARIO_EXEC
                     ORDER BY 
                         EXTRACT(YEAR FROM MOSA.DT_ATIVIDADE) DESC,
                         EXTRACT(MONTH FROM MOSA.DT_ATIVIDADE) DESC,
-                        MTOS.DS_TIPO ASC
+                        MTOS.DS_TIPO ASC,
+                        ATP.NR_SEQUENCIA DESC
                     """
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -223,7 +232,7 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
 
 def calcular_indicadores(df):
     """Calcula os indicadores de SLA, extrai status e tipos distintos."""
-    print(f'\n*****Calcula os indicadores de SLA, extrai status e tipos distintos')
+    print(f'\n*****calcular_indicadores()')
     if df.empty:
         return {
             "total_ordens": 0
@@ -234,7 +243,7 @@ def calcular_indicadores(df):
     total_ordens_Encerrada = len(df[df['STATUS'] == 'Encerrada'])
     total_ordens_Processo = len(df[df['STATUS'] == 'Processo'])
     
-    print(f'\n\n======\ntotal_ordens: {total_ordens}\ntotal_ordens_Aberta: {total_ordens_Aberta}\ntotal_ordens_Encerrada: {total_ordens_Encerrada}\ntotal_ordens_Processo: {total_ordens_Processo}  \n=====\n\n')
+    print(f'======\ntotal_ordens: {total_ordens}\ntotal_ordens_Aberta: {total_ordens_Aberta}\ntotal_ordens_Encerrada: {total_ordens_Encerrada}\ntotal_ordens_Processo: {total_ordens_Processo}  \n=====\n\n')
     
     # Extraindo distintos
     status_distintos = df['STATUS'].unique().tolist()
@@ -254,6 +263,7 @@ def calcular_indicadores(df):
     Suporte = contagem_por_tipo.get('Suporte', 0)
     Relatorio = contagem_por_tipo.get('Relatório', 0)
     Desenvolvimento = contagem_por_tipo.get('Desenvolvimento', 0)
+    
     print(f'Corretiva: {Corretiva}')
     print(f'Ronda_Inspecao: {Ronda_Inspecao}')
     print(f'Cadastro: {Cadastro}')
@@ -506,6 +516,8 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
 
     # Criando um DataFrame para o Plotly Express
     df_tipos = pd.DataFrame({'Tipo': tipos_os, 'Contagem': contagens})
+    
+    print(f'\n\n*****df_tipos:\n{df_tipos}\n\n')
 
     # Mapeamento de cores (opcional, se quiser cores customizadas)
     color_map = {
