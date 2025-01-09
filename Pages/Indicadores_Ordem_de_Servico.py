@@ -245,7 +245,7 @@ def calcular_indicadores(df):
 
     # Contagem de ordens por tipo
     contagem_por_tipo = df['TIPO'].value_counts().to_dict()
-    print(f'contagem_por_tipo: {contagem_por_tipo}')
+    print(f'\ncontagem_por_tipo: {contagem_por_tipo}')
     
     # Desestruturando a contagem por tipo em variáveis
     Corretiva = contagem_por_tipo.get('Corretiva', 0)
@@ -253,11 +253,13 @@ def calcular_indicadores(df):
     Cadastro = contagem_por_tipo.get('Cadastro', 0)
     Suporte = contagem_por_tipo.get('Suporte', 0)
     Relatorio = contagem_por_tipo.get('Relatório', 0)
+    Desenvolvimento = contagem_por_tipo.get('Desenvolvimento', 0)
     print(f'Corretiva: {Corretiva}')
     print(f'Ronda_Inspecao: {Ronda_Inspecao}')
     print(f'Cadastro: {Cadastro}')
     print(f'Suporte: {Suporte}')
     print(f'Relatório: {Relatorio}')
+    print(f'Desenvolvimento: {Desenvolvimento}')
 
     total_minutos = df['MINUTOS_TOTAL'].sum()
     print(f"============================================================================================")
@@ -288,6 +290,7 @@ def calcular_indicadores(df):
         "Cadastro": Cadastro,
         "Suporte": Suporte,
         "Relatorio": Relatorio,
+        "Desenvolvimento": Desenvolvimento,
         "total_horas": total_horas,
         "minutos_restantes": minutos_restantes
     } 
@@ -498,7 +501,7 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
     """Exibe o gráfico de barras da contagem de ordens de serviço por tipo."""
 
     # Extraindo dados do dicionário de indicadores
-    tipos_os = ['Corretiva', 'Ronda_Inspecao', 'Cadastro', 'Suporte', 'Relatorio']
+    tipos_os = ['Corretiva', 'Ronda_Inspecao', 'Cadastro', 'Suporte', 'Relatorio','Desenvolvimento']
     contagens = [indicadores_calc.get(tipo, 0) for tipo in tipos_os]
 
     # Criando um DataFrame para o Plotly Express
@@ -510,7 +513,8 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
         'Ronda_Inspecao': 'orange',
         'Cadastro': 'lightgreen',
         'Suporte': 'lightcoral',
-        'Relatorio': 'pink',
+        'Relatorio': 'green',
+        'Desenvolvimento': 'lightblue',
     }
 
     fig = px.bar(df_tipos,
