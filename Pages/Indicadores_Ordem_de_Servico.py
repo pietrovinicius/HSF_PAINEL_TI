@@ -14,9 +14,10 @@ import plotly.express as px
 import io
 import plotly.colors as pc
 import time
+import re
 
 # Configuração da página Streamlit
-st.set_page_config(layout="wide", initial_sidebar_state="expanded", page_title="Indicadores Ordem de Servico")
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed", page_title="Indicadores Ordem de Servico")
 
 # Aumentando exibição do DataFrame no Streamlit
 pd.set_option("styler.render.max_elements", 1249090)
@@ -379,23 +380,32 @@ def calcular_indicadores_por_analista(df):
     }
 
 def exibir_cartoes_analistas(analistas_horas):
-    """Exibe cartões com as horas de atividades de cada analista."""
-
+    """Exibe cartões com as horas de atividades de cada analista, ordenado por horas (decrescente)."""
+    print(f'\nexibir_cartoes_analistas()')
     if not analistas_horas:
       st.warning("Não há dados para exibir os cartões dos analistas")
       st.empty()
       return
 
-    num_colunas = 3  # Quantidade de colunas por linha
-    analistas = list(analistas_horas.items()) # Converte em lista
+    num_colunas = 4  # Quantidade de colunas por linha
     
-    for i in range(0, len(analistas), num_colunas):
+    # Converte o dicionário em uma lista de tuplas (analista, horas_minutos)
+    analistas = list(analistas_horas.items())
+    
+    # Ordena a lista de analistas por quantidade de horas (decrescente)
+    analistas_ordenados = sorted(analistas, 
+                                key=lambda item: int(re.findall(r'\d+', item[1])[0]) if re.findall(r'\d+', item[1]) else 0,
+                                reverse=True)
+    
+    print(f'\n\n*****analistas_ordenados:\n{analistas_ordenados} \n\n')
+    
+    for i in range(0, len(analistas_ordenados), num_colunas):
         # Criar colunas para cada linha de cartões
         cols = st.columns(num_colunas)
         
         for j in range(num_colunas):
-            if i + j < len(analistas): # Garantir que nao pegue analista fora do range da lista
-                analista, horas_minutos = analistas[i + j]
+            if i + j < len(analistas_ordenados): # Garantir que nao pegue analista fora do range da lista
+                analista, horas_minutos = analistas_ordenados[i + j]
                 with cols[j]: # Adicionar cartao na coluna
                     st.metric(label=f"{analista}", value=f"{horas_minutos}")
 
@@ -552,7 +562,6 @@ def gerar_dataframe_para_grafico_barras_analistas(df):
     
     return df_analistas
 
-
 def exibir_grafico_barras_analistas(df):
     """Exibe o gráfico de barras das horas de atividades por analista."""
     
@@ -595,9 +604,7 @@ def exibir_grafico_barras_analistas(df):
         hovertemplate="<b>Analista:</b> %{x}<br><b>Total:</b> %{y} Ordens"  # Personalizando o hovertemplate
     )
     st.plotly_chart(fig)
-    
-
-    
+     
 
 #=================================== MAIN #===================================
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
