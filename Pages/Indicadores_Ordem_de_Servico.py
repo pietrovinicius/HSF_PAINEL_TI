@@ -243,18 +243,15 @@ def calcular_indicadores(df):
     total_ordens_Encerrada = len(df[df['STATUS'] == 'Encerrada'])
     total_ordens_Processo = len(df[df['STATUS'] == 'Processo'])
     
-    print(f'======\ntotal_ordens: {total_ordens}\ntotal_ordens_Aberta: {total_ordens_Aberta}\ntotal_ordens_Encerrada: {total_ordens_Encerrada}\ntotal_ordens_Processo: {total_ordens_Processo}  \n=====\n\n')
+    #print(f'======\ntotal_ordens: {total_ordens}\ntotal_ordens_Aberta: {total_ordens_Aberta}\ntotal_ordens_Encerrada: {total_ordens_Encerrada}\ntotal_ordens_Processo: {total_ordens_Processo}  \n=====\n\n')
     
     # Extraindo distintos
     status_distintos = df['STATUS'].unique().tolist()
-    print(f"Status Distintos: {status_distintos}")
     
     tipos_distintos = df['TIPO'].unique().tolist()
-    print(f'Tipos Distintos: {tipos_distintos}')
 
     # Contagem de ordens por tipo
     contagem_por_tipo = df['TIPO'].value_counts().to_dict()
-    print(f'\ncontagem_por_tipo: {contagem_por_tipo}')
     
     # Desestruturando a contagem por tipo em variáveis
     Corretiva = contagem_por_tipo.get('Corretiva', 0)
@@ -264,18 +261,9 @@ def calcular_indicadores(df):
     Relatorio = contagem_por_tipo.get('Relatório', 0)
     Desenvolvimento = contagem_por_tipo.get('Desenvolvimento', 0)
     
-    print(f'Corretiva: {Corretiva}')
-    print(f'Ronda_Inspecao: {Ronda_Inspecao}')
-    print(f'Cadastro: {Cadastro}')
-    print(f'Suporte: {Suporte}')
-    print(f'Relatório: {Relatorio}')
-    print(f'Desenvolvimento: {Desenvolvimento}')
-
     total_minutos = df['MINUTOS_TOTAL'].sum()
-    print(f"============================================================================================")
     
     #Precisei arredondar o número e depois o transformar em inteiro:
-    print(f"total_minutos: {int(round(total_minutos))}")
     total_horas = total_minutos // 60
     minutos_restantes = total_minutos % 60
     
@@ -284,10 +272,7 @@ def calcular_indicadores(df):
     
     #Precisei arredondar o número e depois o transformar em inteiro:
     minutos_restantes = str(int(round(minutos_restantes))) + 'm'
-    print(f"Total: {total_horas}")
-    print(f"minutos_restantes: {minutos_restantes}")
     
-    print(f"============================================================================================\n")
     return {
         "total_ordens": total_ordens,
         "total_ordens_Aberta": total_ordens_Aberta,
@@ -318,33 +303,23 @@ def calcular_indicadores_por_analista(df):
            "total_atividades": 0
        }
     total_atividades = len(df)
-    print(f"total_atividades: {total_atividades}")
     
     # Extraindo distintos
     status_distintos = df['STATUS'].unique().tolist()
-    print(f"Status Distintos: {status_distintos}")
     
     tipos_distintos = df['TIPO'].unique().tolist()
-    print(f'Tipos Distintos: {tipos_distintos}')
 
     # Contagem de ordens por tipo
     contagem_por_tipo = df['TIPO'].value_counts().to_dict()
-    print(f'contagem_por_tipo: {contagem_por_tipo}')
     
     # Desestruturando a contagem por tipo em variáveis
     Corretiva = contagem_por_tipo.get('Corretiva', 0)
     Ronda_Inspecao = contagem_por_tipo.get('Ronda/Inspeção', 0)
     Cadastro = contagem_por_tipo.get('Cadastro', 0)
     Suporte = contagem_por_tipo.get('Suporte', 0)
-    print(f'Corretiva: {Corretiva}')
-    print(f'Ronda_Inspecao: {Ronda_Inspecao}')
-    print(f'Cadastro: {Cadastro}')
-    print(f'Suporte: {Suporte}')
     
     total_minutos = df['MINUTOS_TOTAL'].sum()
-    print(f"============================================================================================")
     #Precisei arredondar o número e depois o transformar em inteiro:
-    print(f"total_minutos: {int(round(total_minutos))}")
     total_horas = total_minutos // 60
     minutos_restantes = total_minutos % 60
 
@@ -354,17 +329,12 @@ def calcular_indicadores_por_analista(df):
     #Precisei arredondar o número e depois o transformar em inteiro:
     minutos_restantes = str(int(round(minutos_restantes))) + 'm'
     
-    print(f"Total Horas: {total_horas}")
-    print(f"minutos_restantes: {minutos_restantes}")
 
     # Obtendo os valores distintos da coluna 'ANALISTA'
     analistas_distintos = df['ANALISTA'].unique()
 
-    # Exibindo os valores distintos em console
-    print(f"Valores distintos da coluna 'ANALISTA':\n{analistas_distintos}")
     # Agrupar por analista e somar os minutos
     analistas_minutos = df.groupby('ANALISTA')['MINUTOS_TOTAL'].sum()
-    print(f'analistas_minutos: {analistas_minutos}')
     # Dicionário para armazenar as horas por analista
     analistas_horas = {}
 
@@ -376,9 +346,6 @@ def calcular_indicadores_por_analista(df):
         horas_minutos = f"{int(round(total_horas_analista))}h {int(round(minutos_restantes_analista))}m"
         analistas_horas[analista] = horas_minutos
         
-    print(f"*******\nAnalistas_horas: \n{analistas_horas}\n*******")
-
-    print(f"============================================================================================\n")
     return {
         "total_atividades": total_atividades,
         "tipos_distintos": tipos_distintos,
@@ -410,7 +377,6 @@ def exibir_cartoes_analistas(analistas_horas):
                                 key=lambda item: int(re.findall(r'\d+', item[1])[0]) if re.findall(r'\d+', item[1]) else 0,
                                 reverse=True)
     
-    print(f'\n\n*****analistas_ordenados:\n{analistas_ordenados} \n\n')
     
     for i in range(0, len(analistas_ordenados), num_colunas):
         # Criar colunas para cada linha de cartões
@@ -441,7 +407,6 @@ def exibir_grafico_pizza(df):
     # Contagem de ordens por status
     status_counts = df['STATUS'].value_counts().reset_index()
     status_counts.columns = ['STATUS', 'count']
-    print(f"Status counts:\n{status_counts}")
 
     # Calcula o percentual
     total_count = status_counts['count'].sum()
@@ -476,7 +441,6 @@ def exibir_grafico_barras(df):
     # Contagem de ordens por status
     status_counts = df['STATUS'].value_counts().reset_index()
     status_counts.columns = ['STATUS', 'count']
-    print(f"Status counts:\n{status_counts}")
 
     # Calcula o percentual (opcional para gráfico de barras, mas pode ser útil)
     total_count = status_counts['count'].sum()
@@ -490,21 +454,32 @@ def exibir_grafico_barras(df):
     }
 
     # Criando o gráfico de barras com Plotly
-    fig = px.bar(status_counts,
-                 x='STATUS',
-                 y='count',
-                 title="Distribuição de Ordens por Status",
-                 color='STATUS',
-                 color_discrete_map=color_map,
-                 text_auto=True  # Mostra os valores diretamente nas barras
-                 )
+    fig = px.bar(
+        status_counts,
+        x='STATUS',
+        y='count',
+        title="Distribuição de Ordens por Status",
+        color='STATUS',
+        color_discrete_map=color_map,
+        text_auto=True  # Mostra os valores diretamente nas barras
+    )
+
     fig.update_traces(
-         hovertemplate="<b>Status:</b> %{x}<br><b>Quantidade:</b> %{y}<br><b>Percentual:</b> %{customdata[0]:.2f}%",
+        hovertemplate="<b>Status:</b> %{x}<br><b>Quantidade:</b> %{y}<br><b>Percentual:</b> %{customdata[0]:.2f}%",
         customdata=status_counts[['percent']]
     )
-    fig.update_layout(yaxis_title="Quantidade de Ordens")
-    fig.update_xaxes(title_text='Status')  # Alterar o rótulo do eixo x
-    fig.update_yaxes(title_text='Ordens de Serviços')  # Alterar o rótulo do eixo y
+
+    # Remove a legenda
+    fig.update_layout(
+        yaxis_title="Quantidade de Ordens",
+        xaxis_title="Status",
+        showlegend=False,  # Esconde a legenda
+        legend_title_text=None
+    )
+    
+    fig.update_traces(showlegend=False)
+
+
     st.plotly_chart(fig)
 
 def exibir_grafico_barras_tipo_os(indicadores_calc):
@@ -517,8 +492,6 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
     # Criando um DataFrame para o Plotly Express
     df_tipos = pd.DataFrame({'Tipo': tipos_os, 'Contagem': contagens})
     
-    print(f'\n\n*****df_tipos:\n{df_tipos}\n\n')
-
     # Mapeamento de cores (opcional, se quiser cores customizadas)
     color_map = {
         'Corretiva': 'skyblue',
@@ -553,6 +526,8 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
         textfont_size=13,
         hovertemplate="<b>Tipo:</b> %{x}<br><b>Total:</b> %{y}"  # Personalizando o hovertemplate
     )
+    
+    fig.update_traces(showlegend=False)
 
     st.plotly_chart(fig)
 
@@ -562,19 +537,14 @@ def gerar_dataframe_para_grafico_barras_analistas(df):
     if df.empty:
         return pd.DataFrame({'Analista': [], 'Ordens': []})
     
-    print(f'\ndf:\n{df[["ORDEM_SERVICO", "ANALISTA"]]} \n')
-    
     # Remover duplicadas ANTES de agrupar
     df_unique = df[["ORDEM_SERVICO", "ANALISTA"]].drop_duplicates()
-    print(f'\n\ndrop_duplicates()\ndf:\n{df_unique} \n')
     
     # Agrupar por analista e contar as ordens de serviço distintas
     df_analistas = df_unique.groupby('ANALISTA')['ORDEM_SERVICO'].count().reset_index(name='Ordens')
     
     # Ordenar o DataFrame pela contagem de ordens em ordem decrescente
     df_analistas = df_analistas.sort_values(by='Ordens', ascending=False)
-    
-    print(f'\ndf_analistas: \n{df_analistas}')
     
     return df_analistas
 
@@ -619,6 +589,9 @@ def exibir_grafico_barras_analistas(df):
         textfont_size=13,
         hovertemplate="<b>Analista:</b> %{x}<br><b>Total:</b> %{y} Ordens"  # Personalizando o hovertemplate
     )
+
+    fig.update_traces(showlegend=False)
+
     st.plotly_chart(fig)
      
 
@@ -636,55 +609,47 @@ if __name__ == "__main__":
                     # Obtendo a lista de anos distintos
                     df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
                     anos_distintos = sorted(df_ordens_geral['ANO'].unique(), reverse=True)
-                    # Filtra os anos, mantendo apenas os iguais ou superiores a 2022
                     anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2024]
                     anos_distintos = anos_distintos[:6]
                     
                     # Inicializa o ano mais recente
                     if 'ano_selecionado' not in st.session_state:
                         st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
-                    
+
                     st.write("---")
-                
+
                     # Cria os botões para selecionar o ano
                     if anos_distintos:
                         st.session_state['ano_selecionado'] = st.selectbox("Selecione o Ano", anos_distintos)
                     else:
                         st.warning("Não há dados para exibir os filtros de anos.")
-                    
+
                     # Filtrando o Data Frame pelo ano selecionado
                     if st.session_state['ano_selecionado'] is not None:
                         df_filtered_ano = df_ordens_geral[df_ordens_geral['ANO'] == st.session_state['ano_selecionado']]
                     else:
                         df_filtered_ano = df_ordens_geral.copy()
-                
+
                     # Obtendo a lista de meses distintos para o ano selecionado
                     meses_distintos = sorted(df_filtered_ano['MES'].unique())
-                    
+
                     # Obtendo a lista de meses por extenso
-                    meses_textos_distintos = sorted(df_filtered_ano['MES_TEXTO'].unique())
-                    print(f'meses_textos_distintos:\n{meses_textos_distintos}')
-                    # Inicializa o mês selecionado, usando o primeiro mês disponível
-                    if 'mes_selecionado' not in st.session_state:
-                        st.session_state['mes_selecionado'] = meses_distintos[0] if meses_distintos else None
-                    
+                    meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
+
+                    # Inicializa o mês selecionado para o mês atual, se disponível
+                    mes_atual = datetime.datetime.now().month
+                    mes_atual_nome = datetime.date(1900, mes_atual, 1).strftime('%B')
+
+                    if 'mes_selecionado' not in st.session_state or st.session_state['mes_selecionado'] not in meses_nomes:
+                        st.session_state['mes_selecionado'] = mes_atual_nome if mes_atual_nome in meses_nomes else "Todos"
+
                     # Criando os botões para selecionar o mês
                     if meses_distintos:
-                        #inserido botoes para cada mes
-                        meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
-                        st.session_state['mes_selecionado'] = st.selectbox("Selecione o Mês", meses_nomes)
-                        
-                        if st.session_state['mes_selecionado'] == "Todos":
-                            st.session_state['mes_selecionado'] = None
-                        else:
-                            try:
-                                # Use a lista de meses por extenso para encontrar o mes selecionado
-                                mes_selecionado_os_mes = meses_distintos[meses_nomes.index(st.session_state['mes_selecionado']) - 1]
-                                st.session_state['mes_selecionado'] = mes_selecionado_os_mes
-                            except ValueError:
-                                pass
+                        mes_selecionado_nome = st.selectbox("Selecione o Mês", meses_nomes, index=meses_nomes.index(st.session_state['mes_selecionado']))
+                        st.session_state['mes_selecionado'] = None if mes_selecionado_nome == "Todos" else meses_distintos[meses_nomes.index(mes_selecionado_nome) - 1]
                     else:
                         st.warning("Não há dados para exibir os filtros de meses.")
+
         ########################################################################################
 
                 #Geracao de Data Frame:
@@ -776,7 +741,6 @@ if __name__ == "__main__":
                 ##DATA FRAME df_ordens_geral:
                 #st.write("---")  # Linha separadora
                 #st.subheader("Geral por tipo de O.S.:")
-                #print(f'\n\n*****df_ordens_geral: \n{df_ordens_geral.columns}')
                 #
                 ##Escolhendo e depois Renomeando colunas:
                 #df_ordens_geral_AJUSTADO = df_ordens_geral[[
@@ -877,7 +841,6 @@ if __name__ == "__main__":
                 st.write("---")  # Linha separadora
                 st.write("---")  # Linha separadora
                 st.subheader("Geral por Atividades:")
-                print(f'\n\n\ndf_rel_1507_Tipo_OS_Analitico\nColunas:\n{df_rel_1507_Tipo_OS_Analitico.columns}')
 
                 
                 #Escolhendo e depois Renomeando colunas:
