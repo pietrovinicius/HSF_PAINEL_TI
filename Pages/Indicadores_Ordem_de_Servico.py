@@ -25,7 +25,7 @@ pd.set_option("styler.render.max_elements", 1249090)
 
 def obter_timestamp_atual():
     """Retorna o timestamp atual no formato YYYY-MM-DD HH-MM-SS."""
-    return datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def formatar_horas_df(df):
     """Formata a coluna 'HORAS' de um DataFrame para 'X horas Y minutos'."""
@@ -614,42 +614,13 @@ def exibir_grafico_barras_analistas(df):
 
 
 #=================================== MAIN #===================================
-#=================================== MAIN #===================================
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
 if __name__ == "__main__":
     print('Indicadores de Ordem de Servico')
     st.logo(logo_path, size="large")
 
-    # Define placeholders for metrics
-    col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
-    metric_placeholder_total_ordens = col1.empty()
-    col2.write("")
-    metric_placeholder_horas = col3.empty()
-    metric_placeholder_minutos = col4.empty()
-    col5.write("")
-    col6.write("")
-    col7.write("")
-    col8.write("")
-
-    st.write("---")  # Linha separadora
-    #Status label:
-    colStatus, colTipo = st.columns(2)
-    with colStatus:
-        st.write('### Status:')
-    with colTipo:
-        st.write('### Tipos:')
-
-    col10, col20, col30, col40, col50, col60, col70, col80 = st.columns(8)
-    metric_placeholder_encerradas = col10.empty()
-    metric_placeholder_processo = col20.empty()
-    metric_placeholder_aberta = col30.empty()
-    col40.write("")
-    metric_placeholder_cadastro = col50.empty()
-    metric_placeholder_corretiva = col60.empty()
-    metric_placeholder_ronda = col70.empty()
-    metric_placeholder_suporte = col80.empty()
-
+    
     while True:
         try:
             timestamp_id = str(time.time())  # Gerar um ID único para a iteração
@@ -729,6 +700,36 @@ if __name__ == "__main__":
             #st.write('# Indicadores de Ordem de Servico')
 
             #st.write("---")  # Linha separadora
+            
+            # Define placeholders for metrics
+            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+            metric_placeholder_total_ordens = col1.empty()
+            col2.write("")
+            metric_placeholder_horas = col3.empty()
+            metric_placeholder_minutos = col4.empty()
+            col5.write("")
+            col6.write("")
+            col7.write("")
+            col8.write("")
+
+            st.write("---")  # Linha separadora
+            #Status label:
+            colStatus, colTipo = st.columns(2)
+            with colStatus:
+                st.write('### Status:')
+            with colTipo:
+                st.write('### Tipos:')
+
+            col10, col20, col30, col40, col50, col60, col70, col80 = st.columns(8)
+            metric_placeholder_encerradas = col10.empty()
+            metric_placeholder_processo = col20.empty()
+            metric_placeholder_aberta = col30.empty()
+            col40.write("")
+            metric_placeholder_cadastro = col50.empty()
+            metric_placeholder_corretiva = col60.empty()
+            metric_placeholder_ronda = col70.empty()
+            metric_placeholder_suporte = col80.empty()
+
 
             # Calculo de Indicadores
             indicadores_calc = calcular_indicadores(df_ordens_geral)
