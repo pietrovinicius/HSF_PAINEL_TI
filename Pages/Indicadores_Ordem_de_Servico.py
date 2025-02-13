@@ -30,8 +30,8 @@ def obter_timestamp_atual():
 def formatar_horas_df(df):
     """Formata a coluna 'HORAS' de um DataFrame para 'X horas Y minutos'."""
     if df.empty:
-      return df
-    
+        return df
+
     def formatar_horas_individual(horas):
         horas_int = int(horas)
         minutos = int((horas - horas_int) * 60)
@@ -40,7 +40,7 @@ def formatar_horas_df(df):
     df['HORAS_FORMATADA'] = df['HORAS_TOTAL'].apply(formatar_horas_individual)
     df = df.drop('HORAS_TOTAL', axis=1)
     return df
-                    
+
 def formatar_horas(horas):
     """Formata as horas para o formato 'X horas Y minutos'."""
     horas_int = int(horas)
@@ -48,10 +48,10 @@ def formatar_horas(horas):
     return f"{horas_int} hora(s) {minutos:02} minuto(s)"
 
 def formatar_ano_dia_mes_vazios(valor):
-     try:
-         return "{:.0f}".format(float(valor))  # Tenta converter para float e formatar
-     except (ValueError, TypeError):
-         return ""  # Retorna string vazia em caso de erro
+    try:
+        return "{:.0f}".format(float(valor))  # Tenta converter para float e formatar
+    except (ValueError, TypeError):
+        return ""  # Retorna string vazia em caso de erro
 
 def preparar_download_excel(df, filename="dados.xlsx"):
     """Converte um DataFrame em um arquivo Excel na memória para download."""
@@ -90,9 +90,9 @@ def REL_1507_Banda_Geral_Tipo_OS():
         else:
             st.error("Erro ao localizar o Instant Client. Verifique o nome da pasta e o caminho.")
             return pd.DataFrame()
-        
+
         connection = oracledb.connect(user="TASY", password="aloisk", dsn="192.168.5.9:1521/TASYPRD")
-        
+
         with connection.cursor() as cursor:
             sql = """
                     --banda Geral / Tipo O.S.:    
@@ -113,11 +113,11 @@ def REL_1507_Banda_Geral_Tipo_OS():
                         ) AS MES_TEXTO,
                         DECODE(ATP.IE_STATUS_ORDEM, 1, 'Aberta', 2, 'Processo', 3, 'Encerrada') AS STATUS,
                         MTOS.DS_TIPO AS TIPO,
-                        
+
                         COUNT(DISTINCT ATP.NR_SEQUENCIA) AS ORDEM_SERVICO_TOTAL,
-                        
+
                         SUM(MOSA.QT_MINUTO) AS MINUTOS_TOTAL,
-                        
+
                         ROUND(SUM(MOSA.QT_MINUTO) / 60) AS HORAS_TOTAL,
                         LPAD(FLOOR((SUM(MOSA.QT_MINUTO) / 60) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 2, '0') AS HORA_HOMEM,
                         RPAD(MOD(ROUND(SUM(MOSA.QT_MINUTO) / COUNT(DISTINCT ATP.NR_SEQUENCIA)), 60), 2, '0') AS MINUTOS_HOMEM,
@@ -173,9 +173,9 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
         else:
             st.error("Erro ao localizar o Instant Client. Verifique o nome da pasta e o caminho.")
             return pd.DataFrame()
-        
+
         connection = oracledb.connect(user="TASY", password="aloisk", dsn="192.168.5.9:1521/TASYPRD")
-        
+
         with connection.cursor() as cursor:
             sql = """
                     --banda Geral / Tipo O.S. ANALITICO:
@@ -235,24 +235,37 @@ def calcular_indicadores(df):
     print(f'\n*****calcular_indicadores()')
     if df.empty:
         return {
-            "total_ordens": 0
+            "total_ordens": 0,
+            "total_ordens_Aberta": 0,
+            "total_ordens_Encerrada": 0,
+            "total_ordens_Processo": 0,
+            "tipos_distintos": [],
+            "contagem_por_tipo": {},
+            "Corretiva": 0,
+            "Ronda_Inspecao": 0,
+            "Cadastro": 0,
+            "Suporte": 0,
+            "Relatorio": 0,
+            "Desenvolvimento": 0,
+            "total_horas": '0h',
+            "minutos_restantes": '0m'
         }
 
     total_ordens = len(df)
     total_ordens_Aberta = len(df[df['STATUS'] == 'Aberta'])
     total_ordens_Encerrada = len(df[df['STATUS'] == 'Encerrada'])
     total_ordens_Processo = len(df[df['STATUS'] == 'Processo'])
-    
+
     #print(f'======\ntotal_ordens: {total_ordens}\ntotal_ordens_Aberta: {total_ordens_Aberta}\ntotal_ordens_Encerrada: {total_ordens_Encerrada}\ntotal_ordens_Processo: {total_ordens_Processo}  \n=====\n\n')
-    
+
     # Extraindo distintos
     status_distintos = df['STATUS'].unique().tolist()
-    
+
     tipos_distintos = df['TIPO'].unique().tolist()
 
     # Contagem de ordens por tipo
     contagem_por_tipo = df['TIPO'].value_counts().to_dict()
-    
+
     # Desestruturando a contagem por tipo em variáveis
     Corretiva = contagem_por_tipo.get('Corretiva', 0)
     Ronda_Inspecao = contagem_por_tipo.get('Ronda/Inspeção', 0)
@@ -260,19 +273,19 @@ def calcular_indicadores(df):
     Suporte = contagem_por_tipo.get('Suporte', 0)
     Relatorio = contagem_por_tipo.get('Relatório', 0)
     Desenvolvimento = contagem_por_tipo.get('Desenvolvimento', 0)
-    
+
     total_minutos = df['MINUTOS_TOTAL'].sum()
-    
+
     #Precisei arredondar o número e depois o transformar em inteiro:
     total_horas = total_minutos // 60
     minutos_restantes = total_minutos % 60
-    
+
     #Precisei arredondar o número e depois o transformar em inteiro:
     total_horas = str(int(round(total_horas))) + 'h'
-    
+
     #Precisei arredondar o número e depois o transformar em inteiro:
     minutos_restantes = str(int(round(minutos_restantes))) + 'm'
-    
+
     return {
         "total_ordens": total_ordens,
         "total_ordens_Aberta": total_ordens_Aberta,
@@ -288,36 +301,45 @@ def calcular_indicadores(df):
         "Desenvolvimento": Desenvolvimento,
         "total_horas": total_horas,
         "minutos_restantes": minutos_restantes
-    } 
-    
+    }
+
 def calcular_indicadores_por_analista(df):
     print(f"\n=====calcular_indicadores_por_analista")
-    
+
     #Colunas:
     #Index(['ORDEM_SERVICO', 'ANO', 'MES', 'MES_TEXTO', 'TIPO', 'STATUS',
     #    'DS_PRIORIDADE', 'ANALISTA', 'MINUTOS_TOTAL', 'GRUPO_PLANEJAMENTO'],
     #    dtype='object')
-    
+
     if df.empty:
-       return {
-           "total_atividades": 0
-       }
+        return {
+            "total_atividades": 0,
+            "tipos_distintos": [],
+            "contagem_por_tipo": {},
+            "Corretiva": 0,
+            "Ronda_Inspecao": 0,
+            "Cadastro": 0,
+            "Suporte": 0,
+            "total_horas": '0h',
+            "minutos_restantes": '0m',
+            "Analistas_horas": {}
+        }
     total_atividades = len(df)
-    
+
     # Extraindo distintos
     status_distintos = df['STATUS'].unique().tolist()
-    
+
     tipos_distintos = df['TIPO'].unique().tolist()
 
     # Contagem de ordens por tipo
     contagem_por_tipo = df['TIPO'].value_counts().to_dict()
-    
+
     # Desestruturando a contagem por tipo em variáveis
     Corretiva = contagem_por_tipo.get('Corretiva', 0)
     Ronda_Inspecao = contagem_por_tipo.get('Ronda/Inspeção', 0)
     Cadastro = contagem_por_tipo.get('Cadastro', 0)
     Suporte = contagem_por_tipo.get('Suporte', 0)
-    
+
     total_minutos = df['MINUTOS_TOTAL'].sum()
     #Precisei arredondar o número e depois o transformar em inteiro:
     total_horas = total_minutos // 60
@@ -325,10 +347,10 @@ def calcular_indicadores_por_analista(df):
 
     #Precisei arredondar o número e depois o transformar em inteiro:
     total_horas = str(int(round(total_horas))) + 'h'
-    
+
     #Precisei arredondar o número e depois o transformar em inteiro:
     minutos_restantes = str(int(round(minutos_restantes))) + 'm'
-    
+
 
     # Obtendo os valores distintos da coluna 'ANALISTA'
     analistas_distintos = df['ANALISTA'].unique()
@@ -345,7 +367,7 @@ def calcular_indicadores_por_analista(df):
         #Precisei arredondar o número e depois o transformar em inteiro:
         horas_minutos = f"{int(round(total_horas_analista))}h {int(round(minutos_restantes_analista))}m"
         analistas_horas[analista] = horas_minutos
-        
+
     return {
         "total_atividades": total_atividades,
         "tipos_distintos": tipos_distintos,
@@ -356,37 +378,36 @@ def calcular_indicadores_por_analista(df):
         "Suporte": Suporte,
         "total_horas": total_horas,
         "minutos_restantes": minutos_restantes,
-         "Analistas_horas": analistas_horas
+        "Analistas_horas": analistas_horas
     }
 
 def exibir_cartoes_analistas(analistas_horas):
     """Exibe cartões com as horas de atividades de cada analista, ordenado por horas (decrescente)."""
     print(f'\nexibir_cartoes_analistas()')
     if not analistas_horas:
-      st.warning("Não há dados para exibir os cartões dos analistas")
-      st.empty()
-      return
+        st.warning("Não há dados para exibir os cartões dos analistas")
+        st.empty()
+        return
 
     num_colunas = 4  # Quantidade de colunas por linha
-    
+
     # Converte o dicionário em uma lista de tuplas (analista, horas_minutos)
     analistas = list(analistas_horas.items())
-    
+
     # Ordena a lista de analistas por quantidade de horas (decrescente)
-    analistas_ordenados = sorted(analistas, 
-                                key=lambda item: int(re.findall(r'\d+', item[1])[0]) if re.findall(r'\d+', item[1]) else 0,
-                                reverse=True)
-    
-    
+    analistas_ordenados = sorted(analistas,
+                                 key=lambda item: int(re.findall(r'\d+', item[1])[0]) if re.findall(r'\d+', item[1]) else 0,
+                                 reverse=True)
+
+
     for i in range(0, len(analistas_ordenados), num_colunas):
         # Criar colunas para cada linha de cartões
         cols = st.columns(num_colunas)
-        
+
         for j in range(num_colunas):
-            if i + j < len(analistas_ordenados): # Garantir que nao pegue analista fora do range da lista
+            if i + j < len(analistas_ordenados):  # Garantir que nao pegue analista fora do range da lista
                 analista, horas_minutos = analistas_ordenados[i + j]
-                with cols[j]: # Adicionar cartao na coluna
-                    st.metric(label=f"{analista}", value=f"{horas_minutos}")
+                cols[j].metric(label=f"{analista}", value=f"{horas_minutos}")
 
 def calcular_homem_hora(df):
     """Calcula o indicador Homem x Hora."""
@@ -411,7 +432,7 @@ def exibir_grafico_pizza(df):
     # Calcula o percentual
     total_count = status_counts['count'].sum()
     status_counts['percent'] = (status_counts['count'] / total_count) * 100
-    
+
     # Mapeamento de cores
     color_map = {
         'Aberta': 'skyblue',
@@ -445,7 +466,7 @@ def exibir_grafico_barras(df):
     # Calcula o percentual (opcional para gráfico de barras, mas pode ser útil)
     total_count = status_counts['count'].sum()
     status_counts['percent'] = (status_counts['count'] / total_count) * 100
-    
+
     # Mapeamento de cores
     color_map = {
         'Aberta': 'skyblue',
@@ -476,22 +497,20 @@ def exibir_grafico_barras(df):
         showlegend=False,  # Esconde a legenda
         legend_title_text=None
     )
-    
+
     fig.update_traces(showlegend=False)
-
-
     st.plotly_chart(fig)
 
 def exibir_grafico_barras_tipo_os(indicadores_calc):
     """Exibe o gráfico de barras da contagem de ordens de serviço por tipo."""
 
     # Extraindo dados do dicionário de indicadores
-    tipos_os = ['Corretiva', 'Ronda_Inspecao', 'Cadastro', 'Suporte', 'Relatorio','Desenvolvimento']
+    tipos_os = ['Corretiva', 'Ronda_Inspecao', 'Cadastro', 'Suporte', 'Relatorio', 'Desenvolvimento']
     contagens = [indicadores_calc.get(tipo, 0) for tipo in tipos_os]
 
     # Criando um DataFrame para o Plotly Express
     df_tipos = pd.DataFrame({'Tipo': tipos_os, 'Contagem': contagens})
-    
+
     # Mapeamento de cores (opcional, se quiser cores customizadas)
     color_map = {
         'Corretiva': 'skyblue',
@@ -503,13 +522,13 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
     }
 
     fig = px.bar(df_tipos,
-                x='Tipo',
-                y='Contagem',
-                title='Contagem de Ordens de Serviço por Tipo',
-                color='Tipo',  # Usar Tipo para aplicar as cores
-                color_discrete_map=color_map,
-                text_auto=True #Habilitar os valores sobre as barras
-               )
+                 x='Tipo',
+                 y='Contagem',
+                 title='Contagem de Ordens de Serviço por Tipo',
+                 color='Tipo',  # Usar Tipo para aplicar as cores
+                 color_discrete_map=color_map,
+                 text_auto=True  # Habilitar os valores sobre as barras
+                 )
 
     fig.update_layout(
         showlegend=True,
@@ -526,53 +545,52 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
         textfont_size=13,
         hovertemplate="<b>Tipo:</b> %{x}<br><b>Total:</b> %{y}"  # Personalizando o hovertemplate
     )
-    
-    fig.update_traces(showlegend=False)
 
+    fig.update_traces(showlegend=False)
     st.plotly_chart(fig)
 
 def gerar_dataframe_para_grafico_barras_analistas(df):
     """Gera o DataFrame para o gráfico de barras dos analistas."""
-    print(f'\ngerar_dataframe_para_grafico_barras_analistas()')
+    print(f'\ngerar_dataframe_para_grafico_barras_analistas() - Inicio')
     if df.empty:
         return pd.DataFrame({'Analista': [], 'Ordens': []})
-    
+
     # Remover duplicadas ANTES de agrupar
     df_unique = df[["ORDEM_SERVICO", "ANALISTA"]].drop_duplicates()
-    
+
     # Agrupar por analista e contar as ordens de serviço distintas
     df_analistas = df_unique.groupby('ANALISTA')['ORDEM_SERVICO'].count().reset_index(name='Ordens')
-    
+
     # Ordenar o DataFrame pela contagem de ordens em ordem decrescente
     df_analistas = df_analistas.sort_values(by='Ordens', ascending=False)
-    
+    print(f'\ngerar_dataframe_para_grafico_barras_analistas() - Fim')
     return df_analistas
 
 def exibir_grafico_barras_analistas(df):
     """Exibe o gráfico de barras das horas de atividades por analista."""
-    
+    print(f" exibir_grafico_barras_analistas(df): {df.shape} - Inicio")
     if df.empty:
         st.warning("Não há dados para exibir o gráfico de barras dos analistas")
         return
-    
+
     # Cria o DataFrame para o Plotly Express
     df_analistas = gerar_dataframe_para_grafico_barras_analistas(df)
-    
+
     if df_analistas.empty:
         st.warning("Não há dados para exibir o gráfico de barras dos analistas")
         return
 
     # Mapeamento de cores (opcional, se quiser cores customizadas)
-    color_map = pc.qualitative.Plotly # Cores padrão do Plotly
+    color_map = pc.qualitative.Plotly  # Cores padrão do Plotly
 
     fig = px.bar(df_analistas,
-                x='ANALISTA',
-                y='Ordens',
-                title='Quantidade de Ordens de Serviço por Analista',
-                color='ANALISTA',  # Usar Analista para aplicar as cores
-                color_discrete_sequence=color_map,
-                text_auto=True, #Habilitar os valores sobre as barras
-                )
+                 x='ANALISTA',
+                 y='Ordens',
+                 title='Quantidade de Ordens de Serviço por Analista',
+                 color='ANALISTA',  # Usar Analista para aplicar as cores
+                 color_discrete_sequence=color_map,
+                 text_auto=True,  # Habilitar os valores sobre as barras
+                 )
 
     fig.update_layout(
         showlegend=True,
@@ -591,282 +609,268 @@ def exibir_grafico_barras_analistas(df):
     )
 
     fig.update_traces(showlegend=False)
-
+    print(f" exibir_grafico_barras_analistas(df) - Fim")
     st.plotly_chart(fig)
-     
 
+
+#=================================== MAIN #===================================
 #=================================== MAIN #===================================
 logo_path = 'HSF_LOGO_-_1228x949_001.png'
 
 if __name__ == "__main__":
     print('Indicadores de Ordem de Servico')
-    st.logo(logo_path,size="large")
+    st.logo(logo_path, size="large")
+
+    # Define placeholders for metrics
+    col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+    metric_placeholder_total_ordens = col1.empty()
+    col2.write("")
+    metric_placeholder_horas = col3.empty()
+    metric_placeholder_minutos = col4.empty()
+    col5.write("")
+    col6.write("")
+    col7.write("")
+    col8.write("")
+
+    st.write("---")  # Linha separadora
+    #Status label:
+    colStatus, colTipo = st.columns(2)
+    with colStatus:
+        st.write('### Status:')
+    with colTipo:
+        st.write('### Tipos:')
+
+    col10, col20, col30, col40, col50, col60, col70, col80 = st.columns(8)
+    metric_placeholder_encerradas = col10.empty()
+    metric_placeholder_processo = col20.empty()
+    metric_placeholder_aberta = col30.empty()
+    col40.write("")
+    metric_placeholder_cadastro = col50.empty()
+    metric_placeholder_corretiva = col60.empty()
+    metric_placeholder_ronda = col70.empty()
+    metric_placeholder_suporte = col80.empty()
+
     while True:
         try:
-            while True:
-        ########################################################################################
-                with st.sidebar:
-                    # Obtendo a lista de anos distintos
-                    df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
-                    anos_distintos = sorted(df_ordens_geral['ANO'].unique(), reverse=True)
-                    anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2024]
-                    anos_distintos = anos_distintos[:6]
-                    
-                    # Inicializa o ano mais recente
-                    if 'ano_selecionado' not in st.session_state:
-                        st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
+            timestamp_id = str(time.time())  # Gerar um ID único para a iteração
 
-                    st.write("---")
-
-                    # Cria os botões para selecionar o ano
-                    if anos_distintos:
-                        st.session_state['ano_selecionado'] = st.selectbox("Selecione o Ano", anos_distintos)
-                    else:
-                        st.warning("Não há dados para exibir os filtros de anos.")
-
-                    # Filtrando o Data Frame pelo ano selecionado
-                    if st.session_state['ano_selecionado'] is not None:
-                        df_filtered_ano = df_ordens_geral[df_ordens_geral['ANO'] == st.session_state['ano_selecionado']]
-                    else:
-                        df_filtered_ano = df_ordens_geral.copy()
-
-                    # Obtendo a lista de meses distintos para o ano selecionado
-                    meses_distintos = sorted(df_filtered_ano['MES'].unique())
-
-                    # Obtendo a lista de meses por extenso
-                    meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
-
-                    # Inicializa o mês selecionado para o mês atual, se disponível
-                    mes_atual = datetime.datetime.now().month
-                    mes_atual_nome = datetime.date(1900, mes_atual, 1).strftime('%B')
-
-                    if 'mes_selecionado' not in st.session_state or st.session_state['mes_selecionado'] not in meses_nomes:
-                        st.session_state['mes_selecionado'] = mes_atual_nome if mes_atual_nome in meses_nomes else "Todos"
-
-                    # Criando os botões para selecionar o mês
-                    if meses_distintos:
-                        mes_selecionado_nome = st.selectbox("Selecione o Mês", meses_nomes, index=meses_nomes.index(st.session_state['mes_selecionado']))
-                        st.session_state['mes_selecionado'] = None if mes_selecionado_nome == "Todos" else meses_distintos[meses_nomes.index(mes_selecionado_nome) - 1]
-                    else:
-                        st.warning("Não há dados para exibir os filtros de meses.")
-
-        ########################################################################################
-                st.write("---")
-                st.write('## Ordens de Serviço:')
-                
-                #Geracao de Data Frame:
+            with st.sidebar:
+                # Obtendo a lista de anos distintos
                 df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
-                
-                #Tratamento de valores null:
-                #df_ordens_geral = df_ordens_geral = df_ordens_geral.fillna('-')
-                
-                # Filtrando o data frame pelo ano selecionado
-                if st.session_state['ano_selecionado'] is not None:
-                    df_ordens_geral = df_ordens_geral[df_ordens_geral['ANO'] == st.session_state['ano_selecionado']]
-                
-                # Filtrando o data frame pelo mes selecionado
-                if st.session_state['mes_selecionado'] is not None:
-                    df_ordens_geral = df_ordens_geral[df_ordens_geral['MES'] == st.session_state['mes_selecionado']]
-                
-                #tratamento de valores com casa decimal:
-                df_ordens_geral['ANO'] = df_ordens_geral['ANO'].apply(lambda x: "{:.0f}".format(x))
-                #df_ordens_geral['MINUTOS_TOTAL'] = df_ordens_geral['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
-                
-                #st.write('# Indicadores de Ordem de Servico')
-                
-                #st.write("---")  # Linha separadora
-                        
-                # Calculo de Indicadores
-                indicadores_calc = calcular_indicadores(df_ordens_geral)
-                
-                col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
-                with col1:
-                    st.metric("Total de Ordens de Serviço", value=indicadores_calc["total_ordens"])
-                with col2:
-                    st.write("")
-                with col3:
-                    st.metric("Horas", value=indicadores_calc["total_horas"])
-                with col4:
-                    st.metric("Minutos", value=indicadores_calc["minutos_restantes"])
-                with col5:
-                    st.write("")
-                with col6:
-                    st.write("")
-                with col7:
-                    st.write("")
-                with col8:
-                    st.write("")
-                
-                
-                st.write("---")  # Linha separadora
-                #Status label:
-                colStatus , colTipo = st.columns(2)
-                with colStatus:
-                    st.write('### Status:')
-                with colTipo:
-                    st.write('### Tipos:')
-                        
-                col10 , col20 , col30 , col40 , col50 , col60 , col70 , col80 = st.columns(8)
-                #Tipos de OS:
-                with col10:
-                    st.metric("Encerradas", value=indicadores_calc["total_ordens_Encerrada"])
-                with col20:
-                    st.metric('Processo', value=indicadores_calc["total_ordens_Processo"])
-                with col30:
-                    st.metric('Aberta', value=indicadores_calc["total_ordens_Aberta"])
-                with col40:
-                    st.write("")
-                #Tipos de OS:
-                with col50:
-                    st.metric("Cadastro", value=indicadores_calc["Cadastro"])
-                with col60:
-                    st.metric("Corretiva", value=indicadores_calc["Corretiva"])
-                with col70:
-                    st.metric("Ronda / Inspeção", value=indicadores_calc["Ronda_Inspecao"])
-                with col80:
-                    st.metric("Suporte", value=indicadores_calc["Suporte"])
-                
-                st.write("---")  # Linha separadora
-                
-                col1,col2 = st.columns(2)
-                with col1:
-                    #exibir o gráfico de barras das ordens por status
-                    exibir_grafico_barras(df_ordens_geral)
-                with col2:
-                    #exibir o gráfico de barras dos tipos de OS
-                    exibir_grafico_barras_tipo_os(indicadores_calc)
-                    
-                
-                
-                ##DATA FRAME df_ordens_geral:
-                #st.write("---")  # Linha separadora
-                #st.subheader("Geral por tipo de O.S.:")
-                #
-                ##Escolhendo e depois Renomeando colunas:
-                #df_ordens_geral_AJUSTADO = df_ordens_geral[[
-                #                                                'ANO','MES_TEXTO','STATUS','TIPO','HORAS_MINUTOS_HOMEM'
-                #                                                    ]].rename(columns={
-                #                                                        'ANO': 'Ano',
-                #                                                        'MES_TEXTO': 'Mês',
-                #                                                        'TIPO': 'Tipo',
-                #                                                        'STATUS': 'Status',
-                #                                                        'HORAS_MINUTOS_HOMEM': 'Tempo'
-                #                                                    })
-                #
-                #st.dataframe(df_ordens_geral_AJUSTADO,hide_index=True, use_container_width=True)
-                #
-                ## Disponibilizar o botão de download
-                #download_xlsx = preparar_download_excel(df_ordens_geral)
-                #st.download_button(
-                #    label="Download em XLSX",
-                #    data=download_xlsx,
-                #    file_name='dados_sla.xlsx',
-                #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                #)
-                
-                # Criar uma nova linha abaixo dos indicadores para o botão de download
-                st.write("---")  # Linha separadora
-                st.write('## Atividades por Analistas:')
-                
-                #data frame analitico:
-                        
-                #Geracao de Data Frame:
-                df_rel_1507_Tipo_OS_Analitico = REL_1507_Banda_Geral_TP_OS_analitico()
-                
-                #Tratamento de valores null:
-                #df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico.fillna('-')
-                
-                # Filtrando o data frame pelo ano selecionado
-                if st.session_state['ano_selecionado'] is not None:
-                    df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] == st.session_state['ano_selecionado']]
-                
-                # Filtrando o data frame pelo mes selecionado
-                if st.session_state['mes_selecionado'] is not None:
-                    df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'] == st.session_state['mes_selecionado']]
-                
-                #tratamento de valores com casa decimal:
-                df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'].apply(lambda x: "{:.0f}".format(x))
-                df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
-                df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
-                
-                #formatando Ano da atividade com funcao:
-                df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
-                
-                #formatando Mes da atividade com funcao:
-                df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
-                
-                #formatando Mes da atividade com funcao:
-                df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
-                
-                #TODO:
-                #Adicionar gráfico de prioridades
-                
-                
-                #st.write("---")  # Linha separadora
-                indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
-                #Exibir os cartões dos analistas:
-                col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
-                with col1:
-                    st.metric("Total de Atividades:", value=indicadores_calc_analitico["total_atividades"])
-                with col2:
-                    st.write("")
-                with col3:
-                    st.metric("Horas", value=indicadores_calc_analitico["total_horas"])
-                    st.write("")
-                with col4:
-                    st.metric("Minutos", value=indicadores_calc_analitico["minutos_restantes"])
-                    st.write("")
-                with col5:
-                    st.write("")
-                with col6:
-                    st.write("")
-                with col7:
-                    st.write("")
-                with col8:
-                    st.write("")
-                
-                #Exibe os cartoes de cada analista:
-                exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])  
-                st.write("---")  # Linha separadora 
-                
-                #Grafico com horas de cada analista:
-                exibir_grafico_barras_analistas(df_rel_1507_Tipo_OS_Analitico)
-                
-                
-                st.write("---")  # Linha separadora
-                st.write("---")  # Linha separadora
-                st.subheader("Geral por Atividades:")
+                anos_distintos = sorted(df_ordens_geral['ANO'].unique(), reverse=True)
+                anos_distintos = [ano for ano in anos_distintos if int(ano) >= 2024]
+                anos_distintos = anos_distintos[:6]
 
-                
-                #Escolhendo e depois Renomeando colunas:
-                df_rel_1507_AJUSTADO = df_rel_1507_Tipo_OS_Analitico[[
-                                                                        'ORDEM_SERVICO', 'ANO_ATIVIDADE', 'MES__ATIVIDADE_TEXTO', 'TIPO', 
-                                                                        'STATUS', 'DS_PRIORIDADE', 'ANALISTA', 'MINUTOS_TOTAL'
-                                                                    ]].rename(columns={
-                                                                        'ORDEM_SERVICO': 'OS',
-                                                                        'ANO_ATIVIDADE': 'Ano',
-                                                                        'MES__ATIVIDADE_TEXTO': 'Mês',
-                                                                        'TIPO': 'Tipo',
-                                                                        'STATUS': 'Status',
-                                                                        'DS_PRIORIDADE': 'Prioridade',
-                                                                        'ANALISTA': 'Responsável',
-                                                                        'MINUTOS_TOTAL': 'Minutos'
-                                                                    })
+                # Inicializa o ano mais recente
+                if 'ano_selecionado' not in st.session_state:
+                    st.session_state['ano_selecionado'] = anos_distintos[0] if anos_distintos else None
 
-                st.dataframe(df_rel_1507_AJUSTADO,hide_index=True, use_container_width=True)
-                
-                # Disponibilizar o botão de download
-                download_xlsx = preparar_download_excel(df_rel_1507_Tipo_OS_Analitico)
-                st.download_button(
-                    label="Download em XLSX",
-                    data=download_xlsx,
-                    file_name='dados_sla.xlsx',
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
-        
-        except Exception as err: 
+                st.write("---")
+
+                # Cria os botões para selecionar o ano
+                if anos_distintos:
+                    st.session_state['ano_selecionado'] = st.selectbox("Selecione o Ano", anos_distintos,
+                                                                         key=f"ano_select_{timestamp_id}")
+                else:
+                    st.warning("Não há dados para exibir os filtros de anos.")
+
+                # Filtrando o Data Frame pelo ano selecionado
+                if st.session_state['ano_selecionado'] is not None:
+                    df_filtered_ano = df_ordens_geral[
+                        df_ordens_geral['ANO'] == st.session_state['ano_selecionado']]
+                else:
+                    df_filtered_ano = df_ordens_geral.copy()
+
+                # Obtendo a lista de meses distintos para o ano selecionado
+                meses_distintos = sorted(df_filtered_ano['MES'].unique())
+
+                # Obtendo a lista de meses por extenso
+                meses_nomes = ["Todos"] + [datetime.date(1900, int(mes), 1).strftime('%B') for mes in meses_distintos]
+
+                # Inicializa o mês selecionado para o mês atual, se disponível
+                mes_atual = datetime.datetime.now().month
+                mes_atual_nome = datetime.date(1900, mes_atual, 1).strftime('%B')
+
+                if 'mes_selecionado' not in st.session_state or st.session_state['mes_selecionado'] not in meses_nomes:
+                    st.session_state['mes_selecionado'] = mes_atual_nome if mes_atual_nome in meses_nomes else "Todos"
+
+                # Criando os botões para selecionar o mês
+                if meses_distintos:
+                    mes_selecionado_nome = st.selectbox("Selecione o Mês", meses_nomes,
+                                                         index=meses_nomes.index(st.session_state['mes_selecionado']),
+                                                         key=f"mes_select_{timestamp_id}")
+                    st.session_state['mes_selecionado'] = None if mes_selecionado_nome == "Todos" else \
+                        meses_distintos[meses_nomes.index(mes_selecionado_nome) - 1]
+                else:
+                    st.warning("Não há dados para exibir os filtros de meses.")
+
+            ########################################################################################
+            st.write("---")
+            st.write('## Ordens de Serviço:')
+
+            #Geracao de Data Frame:
+            df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
+
+            #Tratamento de valores null:
+            #df_ordens_geral = df_ordens_geral = df_ordens_geral.fillna('-')
+
+            # Filtrando o data frame pelo ano selecionado
+            if st.session_state['ano_selecionado'] is not None:
+                df_ordens_geral = df_ordens_geral[df_ordens_geral['ANO'] == st.session_state['ano_selecionado']]
+
+            # Filtrando o data frame pelo mes selecionado
+            if st.session_state['mes_selecionado'] is not None:
+                df_ordens_geral = df_ordens_geral[df_ordens_geral['MES'] == st.session_state['mes_selecionado']]
+
+            #tratamento de valores com casa decimal:
+            df_ordens_geral['ANO'] = df_ordens_geral['ANO'].apply(lambda x: "{:.0f}".format(x))
+            #df_ordens_geral['MINUTOS_TOTAL'] = df_ordens_geral['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
+
+            #st.write('# Indicadores de Ordem de Servico')
+
+            #st.write("---")  # Linha separadora
+
+            # Calculo de Indicadores
+            indicadores_calc = calcular_indicadores(df_ordens_geral)
+
+            # Update metrics
+            metric_placeholder_total_ordens.metric("Total de Ordens de Serviço", value=indicadores_calc["total_ordens"])
+            metric_placeholder_horas.metric("Horas", value=indicadores_calc["total_horas"])
+            metric_placeholder_minutos.metric("Minutos", value=indicadores_calc["minutos_restantes"])
+            metric_placeholder_encerradas.metric("Encerradas", value=indicadores_calc["total_ordens_Encerrada"])
+            metric_placeholder_processo.metric('Processo', value=indicadores_calc["total_ordens_Processo"])
+            metric_placeholder_aberta.metric('Aberta', value=indicadores_calc["total_ordens_Aberta"])
+            metric_placeholder_cadastro.metric("Cadastro", value=indicadores_calc["Cadastro"])
+            metric_placeholder_corretiva.metric("Corretiva", value=indicadores_calc["Corretiva"])
+            metric_placeholder_ronda.metric("Ronda / Inspeção", value=indicadores_calc["Ronda_Inspecao"])
+            metric_placeholder_suporte.metric("Suporte", value=indicadores_calc["Suporte"])
+
+            st.write("---")  # Linha separadora
+
+            col1, col2 = st.columns(2)
+            with col1:
+                #exibir o gráfico de barras das ordens por status
+                exibir_grafico_barras(df_ordens_geral)
+            with col2:
+                #exibir o gráfico de barras dos tipos de OS
+                exibir_grafico_barras_tipo_os(indicadores_calc)
+
+            ##DATA FRAME df_ordens_geral:
+            #st.write("---")  # Linha separadora
+            #st.subheader("Geral por tipo de O.S.:")
+            #
+            ##Escolhendo e depois Renomeando colunas:
+            #df_ordens_geral_AJUSTADO = df_ordens_geral[[
+            #                                                'ANO','MES_TEXTO','STATUS','TIPO','HORAS_MINUTOS_HOMEM'
+            #                                                    ]].rename(columns={
+            #                                                        'ANO': 'Ano',
+            #                                                        'MES_TEXTO': 'Mês',
+            #                                                        'TIPO': 'Tipo',
+            #                                                        'STATUS': 'Status',
+            #                                                        'HORAS_MINUTOS_HOMEM': 'Tempo'
+            #                                                    })
+            #
+            #st.dataframe(df_ordens_geral_AJUSTADO,hide_index=True, use_container_width=True)
+            #
+            ## Disponibilizar o botão de download
+            #download_xlsx = preparar_download_excel(df_ordens_geral)
+            #st.download_button(
+            #    label="Download em XLSX",
+            #    data=download_xlsx,
+            #    file_name='dados_sla.xlsx',
+            #    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            #)
+
+            # Criar uma nova linha abaixo dos indicadores para o botão de download
+            st.write("---")  # Linha separadora
+            st.write('## Atividades por Analistas:')
+
+            #data frame analitico:
+
+            #Geracao de Data Frame:
+            df_rel_1507_Tipo_OS_Analitico = REL_1507_Banda_Geral_TP_OS_analitico()
+
+            #Tratamento de valores null:
+            #df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico.fillna('-')
+
+            # Filtrando o data frame pelo ano selecionado
+            if st.session_state['ano_selecionado'] is not None:
+                df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[
+                    df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] == st.session_state['ano_selecionado']]
+
+            # Filtrando o data frame pelo mes selecionado
+            if st.session_state['mes_selecionado'] is not None:
+                df_rel_1507_Tipo_OS_Analitico = df_rel_1507_Tipo_OS_Analitico[
+                    df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'] == st.session_state['mes_selecionado']]
+
+            #tratamento de valores com casa decimal:
+            df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico[
+                'ANO_ATIVIDADE'].apply(lambda x: "{:.0f}".format(x))
+            df_rel_1507_Tipo_OS_Analitico['ANO_ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico[
+                'ANO_ORDEM_SERVICO'].apply(lambda x: "{:.0f}".format(x))
+            df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'] = df_rel_1507_Tipo_OS_Analitico['ORDEM_SERVICO'].apply(
+                lambda x: "{:.0f}".format(x))
+
+            #formatando Ano da atividade com funcao:
+            df_rel_1507_Tipo_OS_Analitico['ANO_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico[
+                'ANO_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
+
+            #formatando Mes da atividade com funcao:
+            df_rel_1507_Tipo_OS_Analitico['MES_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico[
+                'MES_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
+
+            #formatando Mes da atividade com funcao:
+            df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico[
+                'DIA_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
+
+            #TODO:
+            #Adicionar gráfico de prioridades
+
+            #st.write("---")  # Linha separadora
+            indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico)
+
+            #Update the metrics
+            #Exibe os cartoes de cada analista:
+            exibir_cartoes_analistas(indicadores_calc_analitico["Analistas_horas"])
+            st.write("---")  # Linha separadora
+
+            #Grafico com horas de cada analista:
+            exibir_grafico_barras_analistas(df_rel_1507_Tipo_OS_Analitico)
+
+            st.write("---")  # Linha separadora
+            st.write("---")  # Linha separadora
+            st.subheader("Geral por Atividades:")
+
+            #Escolhendo e depois Renomeando colunas:
+            df_rel_1507_AJUSTADO = df_rel_1507_Tipo_OS_Analitico[[
+                'ORDEM_SERVICO', 'ANO_ATIVIDADE', 'MES__ATIVIDADE_TEXTO', 'TIPO',
+                'STATUS', 'DS_PRIORIDADE', 'ANALISTA', 'MINUTOS_TOTAL'
+            ]].rename(columns={
+                'ORDEM_SERVICO': 'OS',
+                'ANO_ATIVIDADE': 'Ano',
+                'MES__ATIVIDADE_TEXTO': 'Mês',
+                'TIPO': 'Tipo',
+                'STATUS': 'Status',
+                'DS_PRIORIDADE': 'Prioridade',
+                'ANALISTA': 'Responsável',
+                'MINUTOS_TOTAL': 'Minutos'
+            })
+
+            st.dataframe(df_rel_1507_AJUSTADO, hide_index=True, use_container_width=True)
+
+            # Disponibilizar o botão de download
+            download_xlsx = preparar_download_excel(df_rel_1507_Tipo_OS_Analitico)
+            st.download_button(
+                label="Download em XLSX",
+                data=download_xlsx,
+                file_name='dados_sla.xlsx',
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+
+        except Exception as err:
             print(f"Inexperado:\n {err=}, {type(err)=}")
 
-        time.sleep(600)  # Pausar por 600 segundos            
-        print(f'\n\n\n\n\nst.rerun()\n')
+        print(f"time.sleep(600)")
+        time.sleep(600)  # Pausar por 600 segundos
+        print(f'\n\nst.rerun()\n')
         st.rerun()
