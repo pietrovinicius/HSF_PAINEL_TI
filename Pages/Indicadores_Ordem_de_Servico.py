@@ -651,7 +651,9 @@ if __name__ == "__main__":
                         st.warning("Não há dados para exibir os filtros de meses.")
 
         ########################################################################################
-
+                st.write("---")
+                st.write('## Ordens de Serviço:')
+                
                 #Geracao de Data Frame:
                 df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
                 
@@ -671,10 +673,8 @@ if __name__ == "__main__":
                 #df_ordens_geral['MINUTOS_TOTAL'] = df_ordens_geral['MINUTOS_TOTAL'].apply(lambda x: "{:.0f}".format(x))
                 
                 #st.write('# Indicadores de Ordem de Servico')
-                st.write("---")
-                st.write('## Ordens de Serviço:')
                 
-                st.write("---")  # Linha separadora
+                #st.write("---")  # Linha separadora
                         
                 # Calculo de Indicadores
                 indicadores_calc = calcular_indicadores(df_ordens_geral)
@@ -766,8 +766,7 @@ if __name__ == "__main__":
                 
                 # Criar uma nova linha abaixo dos indicadores para o botão de download
                 st.write("---")  # Linha separadora
-                st.write("---")  # Linha separadora
-                
+                st.write('## Atividades por Analistas:')
                 
                 #data frame analitico:
                         
@@ -799,15 +798,11 @@ if __name__ == "__main__":
                 #formatando Mes da atividade com funcao:
                 df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'] = df_rel_1507_Tipo_OS_Analitico['DIA_ATIVIDADE'].apply(formatar_ano_dia_mes_vazios)
                 
-
-                st.write("---")
-                st.write('## Atividades por Analistas:')
-                
                 #TODO:
                 #Adicionar gráfico de prioridades
                 
                 
-                st.write("---")  # Linha separadora
+                #st.write("---")  # Linha separadora
                 indicadores_calc_analitico = calcular_indicadores_por_analista(df_rel_1507_Tipo_OS_Analitico) 
                 #Exibir os cartões dos analistas:
                 col1,col2,col3,col4,col5,col6,col7,col8 = st.columns(8)
