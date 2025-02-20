@@ -498,7 +498,10 @@ def exibir_grafico_barras(df):
          hovertemplate="<b>Status:</b> %{x}<br><b>Quantidade:</b> %{y}<br><b>Percentual:</b> %{customdata[0]:.2f}%",
         customdata=status_counts[['percent']]
     )
-    fig.update_layout(yaxis_title="Quantidade de Ordens")
+    fig.update_layout(
+                        yaxis_title="Quantidade de Ordens",
+                        showlegend=False,
+                      )
     fig.update_xaxes(title_text='Status')  # Alterar o rótulo do eixo x
     fig.update_yaxes(title_text='Ordens de Serviços')  # Alterar o rótulo do eixo y
     st.plotly_chart(fig)
