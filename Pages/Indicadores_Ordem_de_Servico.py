@@ -535,7 +535,7 @@ def exibir_grafico_barras_tipo_os(indicadores_calc):
                )
 
     fig.update_layout(
-        showlegend=True,
+        showlegend=False,
         legend_title_text=" ",
         margin=dict(l=20, r=20, t=60, b=20),
         title_font=dict(size=17),
@@ -601,7 +601,7 @@ def exibir_grafico_barras_analistas(df):
                 )
 
     fig.update_layout(
-        showlegend=True,
+        showlegend=False,
         legend_title_text=" ",
         margin=dict(l=20, r=20, t=60, b=20),
         title_font=dict(size=17),
