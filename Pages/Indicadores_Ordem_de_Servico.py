@@ -42,7 +42,7 @@ pd.set_option("styler.render.max_elements", 1249090)
 
 def obter_timestamp_atual():
     """Retorna o timestamp atual no formato YYYY-MM-DD HH-MM-SS."""
-    return datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def formatar_horas_df(df):
     """Formata a coluna 'HORAS' de um DataFrame para 'X horas Y minutos'."""
