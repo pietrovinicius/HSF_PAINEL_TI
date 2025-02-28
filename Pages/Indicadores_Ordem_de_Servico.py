@@ -116,7 +116,7 @@ def executar_query_oracle(sql):
         st.error(f"\nexecutar_query_oracle(sql)\nException: {erro}. {obter_timestamp_atual()}")
         return pd.DataFrame()
 
-@st.cache_data
+#@st.cache_data
 def REL_1507_Banda_Geral_Tipo_OS():
     sql = """
             --banda Geral / Tipo O.S.:    
@@ -176,10 +176,10 @@ def REL_1507_Banda_Geral_Tipo_OS():
     df = executar_query_oracle(sql)
     if not df.empty:
          st.success("✅ Gerado às: " + obter_timestamp_atual())
-         print("✅ Gerado às: " + obter_timestamp_atual())
+         print(f"{obter_timestamp_atual()} - ✅ REL_1507_Banda_Geral_Tipo_OS - Gerado!" )
     return df
 
-@st.cache_data
+#@st.cache_data
 def REL_1507_Banda_Geral_TP_OS_analitico():
     sql = """
              --banda Geral / Tipo O.S. ANALITICO:
@@ -223,7 +223,8 @@ def REL_1507_Banda_Geral_TP_OS_analitico():
     df = executar_query_oracle(sql)
     if not df.empty:
          #st.success("✅ Gerado às: " + obter_timestamp_atual())
-         print("✅ Gerado às: " + obter_timestamp_atual())
+         #print("✅ Gerado às: " + obter_timestamp_atual())
+         print(f"{obter_timestamp_atual()} - ✅ REL_1507_Banda_Geral_TP_OS_analitico - Gerado!" )
     return df
 
 def calcular_indicadores(df):
@@ -631,6 +632,7 @@ if __name__ == "__main__":
     atualizar_a_cada = 600 # Atualiza a cada 10 minutos
 
     while True:
+        print(f'\n{obter_timestamp_atual()} - Indicadores de Ordem de Servico - if __name__ == "__main__" ')
         try:
             with st.sidebar:
                 # Obtendo a lista de anos distintos
@@ -690,7 +692,7 @@ if __name__ == "__main__":
         
         
             #Geracao de Data Frame:
-            df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
+            #df_ordens_geral = REL_1507_Banda_Geral_Tipo_OS()
             
             #Tratamento de valores null:
             #df_ordens_geral = df_ordens_geral = df_ordens_geral.fillna('-')
@@ -858,7 +860,8 @@ if __name__ == "__main__":
 
         except Exception as err: 
             print(f"Inexperado:\n {err=}, {type(err)=}")
-
+        
+        print(f'{obter_timestamp_atual()} - time.sleep({atualizar_a_cada})')
         time.sleep(atualizar_a_cada)
-        print(f'\n\n\n\n\nst.rerun()\n')
+        print(f'{obter_timestamp_atual()} - st.rerun()\n')
         st.rerun()
